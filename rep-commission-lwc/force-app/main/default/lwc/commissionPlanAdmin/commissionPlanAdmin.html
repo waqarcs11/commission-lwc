@@ -1,0 +1,55 @@
+<template>
+    <lightning-card title="Commission Plan Field Configuration" icon-name="standard:settings">
+        <div class="slds-p-around_medium">
+
+            <!-- Plan selector -->
+            <lightning-combobox
+                name="plan"
+                label="Select Commission Plan"
+                placeholder="-- Select a Plan --"
+                value={selectedPlan}
+                options={planOptions}
+                onchange={handlePlanChange}
+                class="slds-m-bottom_medium"
+            ></lightning-combobox>
+
+            <!-- Loading spinner -->
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+            </template>
+
+            <!-- Field checkboxes (shown once a plan is selected and not loading) -->
+            <template if:true={showFields}>
+                <div class="slds-box slds-m-bottom_medium">
+                    <p class="slds-text-heading_small slds-m-bottom_small">
+                        Representative Commission Fields
+                    </p>
+                    <template for:each={fieldList} for:item="field">
+                        <div key={field.apiName} class="slds-m-bottom_x-small">
+                            <lightning-input
+                                type="checkbox"
+                                label={field.label}
+                                checked={field.checked}
+                                data-api={field.apiName}
+                                onchange={handleFieldToggle}
+                            ></lightning-input>
+                        </div>
+                    </template>
+                </div>
+
+                <lightning-button
+                    variant="brand"
+                    label="Save Configuration"
+                    onclick={handleSave}
+                    disabled={isSaving}
+                ></lightning-button>
+            </template>
+
+            <!-- Empty state when no fields returned -->
+            <template if:true={showEmpty}>
+                <p class="slds-text-color_weak">No accessible fields found on Representative Commission.</p>
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

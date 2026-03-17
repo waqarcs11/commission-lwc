@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(sf project:*)",
+      "Bash(sf data:*)",
+      "Bash(sf org:*)",
+      "Bash(sf api:*)"
+    ]
+  }
+}
