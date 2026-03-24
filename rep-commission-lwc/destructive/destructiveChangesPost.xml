@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Package xmlns="http://soap.sforce.com/2006/04/metadata">
+    <types>
+        <members>Representative_Commission__c.Attainment__c</members>
+        <members>Representative_Commission__c.Tier_Lower__c</members>
+        <members>Representative_Commission__c.Tier_Upper__c</members>
+        <members>Representative_Commission__c.Tier_Payout__c</members>
+        <members>Representative_Commission__c.Brokered_Commission__c</members>
+        <members>Representative_Commission__c.Team_Closing_Ratio_Commission__c</members>
+        <members>Representative_Commission__c.Team_Margin_Commission__c</members>
+        <members>Representative_Commission__c.Deal_Margin_Commission__c</members>
+        <members>Representative_Commission__c.Termed_Deal_Commission__c</members>
+        <members>Representative_Commission__c.Cardiff_Commission__c</members>
+        <members>Representative_Commission__c.Day60_Termed_Commission__c</members>
+        <members>Representative_Commission__c.Proposed_Comp_Commission__c</members>
+        <members>Representative_Commission__c.Commission_Amount__c</members>
+        <members>Representative_Commission__c.Final_Commission__c</members>
+        <name>CustomField</name>
+    </types>
+    <version>64.0</version>
+</Package>

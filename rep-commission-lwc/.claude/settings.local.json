@@ -4,7 +4,22 @@
       "Bash(sf project:*)",
       "Bash(sf data:*)",
       "Bash(sf org:*)",
-      "Bash(sf api:*)"
+      "Bash(sf api:*)",
+      "Bash(dir /s \"E:\\\\xampp\\\\htdocs\\\\commission_module\")",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//e/xampp/htdocs/commission_LWC/rep-commission-lwc/**)",
+      "Bash(done)",
+      "Bash(find E:xampphtdocscommission_moduleforce-appmaindefaultcustomMetadata -type f -name *.md-meta.xml)",
+      "Bash(cd:*)",
+      "Bash(cmd /c \"cd /d E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc && sf data query --query \\\\\"SELECT MasterLabel, DeveloperName FROM FlexiPageTemplateInfo WHERE Type = 'RecordPage' LIMIT 20\\\\\" --target-org MyCommissionOrg 2>&1\")",
+      "Bash(cmd /c \"cd /d E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc && sf org open --target-org MyCommissionOrg --path /lightning/setup/ObjectManager/Representative_Commission__c/PageLayouts/home 2>&1\")",
+      "Bash(cmd /c \"cd /d E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc && sf project deploy start --source-dir force-app/main/default/lwc/repCommissionRecord --target-org MyCommissionOrg 2>&1\")",
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_0.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_0.md-meta.xml\")",
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_2.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_2.md-meta.xml\")",
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_3.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_3.md-meta.xml\")",
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_6.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_6.md-meta.xml\")",
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\")"
     ]
   }
 }

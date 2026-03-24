@@ -1,0 +1,145 @@
+<template>
+    <lightning-card title="Commission Data Entry" icon-name="standard:currency">
+        <div class="slds-p-around_medium">
+
+            <!-- Step progress bar -->
+            <div class="slds-progress slds-m-bottom_large">
+                <ol class="slds-progress__list">
+                    <li class={step1Class}>
+                        <button class="slds-button slds-progress__marker" title="Step 1: Commission Details">
+                            <span class="slds-assistive-text">Step 1</span>
+                        </button>
+                        <p class="slds-progress__item_content slds-grid slds-grid_align-spread">
+                            Commission Details
+                        </p>
+                    </li>
+                    <li class={step2Class}>
+                        <button class="slds-button slds-progress__marker" title="Step 2: Field Values">
+                            <span class="slds-assistive-text">Step 2</span>
+                        </button>
+                        <p class="slds-progress__item_content slds-grid slds-grid_align-spread">
+                            Field Values
+                        </p>
+                    </li>
+                </ol>
+                <div aria-valuemin="0" aria-valuemax="100" aria-valuenow={progressValue}
+                    class="slds-progress-bar slds-progress-bar_x-small" role="progressbar">
+                    <span class="slds-progress-bar__value" style={progressStyle}></span>
+                </div>
+            </div>
+
+            <!-- ── STEP 1 ── -->
+            <template if:true={isStep1}>
+                <div class="slds-form slds-form_stacked">
+
+                    <lightning-combobox
+                        label="Select User"
+                        placeholder="-- Select a User --"
+                        value={selectedUserId}
+                        options={userOptions}
+                        onchange={handleUserChange}
+                        required
+                        class="slds-m-bottom_small"
+                    ></lightning-combobox>
+
+                    <lightning-input
+                        type="month"
+                        label="Select Month"
+                        value={selectedMonth}
+                        onchange={handleMonthChange}
+                        required
+                        class="slds-m-bottom_small"
+                    ></lightning-input>
+
+                    <lightning-combobox
+                        label="Select Commission Plan"
+                        placeholder="-- Select a Plan --"
+                        value={selectedPlan}
+                        options={planOptions}
+                        onchange={handlePlanChange}
+                        required
+                        class="slds-m-bottom_small"
+                    ></lightning-combobox>
+
+                </div>
+
+                <div class="slds-m-top_medium">
+                    <lightning-button
+                        variant="brand"
+                        label="Next"
+                        onclick={handleNext}
+                        disabled={isNextDisabled}
+                    ></lightning-button>
+                </div>
+            </template>
+
+            <!-- ── STEP 2 ── -->
+            <template if:true={isStep2}>
+
+                <!-- Selection summary -->
+                <div class="slds-box slds-theme_shade slds-m-bottom_medium">
+                    <p class="slds-m-bottom_x-small"><strong>User:</strong> {selectedUserName}</p>
+                    <p class="slds-m-bottom_x-small"><strong>Month:</strong> {selectedMonthLabel}</p>
+                    <p><strong>Plan:</strong> {selectedPlanLabel}</p>
+                </div>
+
+                <!-- Existing record notice -->
+                <template if:true={isExistingRecord}>
+                    <div class="slds-notify slds-notify_alert slds-theme_info slds-m-bottom_medium" role="alert">
+                        <span class="slds-assistive-text">Info</span>
+                        An existing record was found for this period. Values have been pre-filled — saving will update it.
+                    </div>
+                </template>
+
+                <!-- Loading fields spinner -->
+                <template if:true={isLoadingFields}>
+                    <lightning-spinner alternative-text="Loading fields" size="small"></lightning-spinner>
+                </template>
+
+                <!-- Dynamic commission fields -->
+                <template if:true={showDynamicFields}>
+                    <div class="slds-form slds-form_stacked slds-m-bottom_medium">
+                        <template for:each={dynamicFields} for:item="field">
+                            <div key={field.apiName} class="slds-m-bottom_small">
+                                <lightning-input
+                                    type="number"
+                                    label={field.label}
+                                    value={field.value}
+                                    formatter={field.formatter}
+                                    step={field.step}
+                                    data-field={field.apiName}
+                                    onchange={handleFieldChange}
+                                ></lightning-input>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <!-- No fields configured warning -->
+                <template if:true={noFieldsConfigured}>
+                    <div class="slds-notify slds-notify_alert slds-theme_warning slds-m-bottom_medium" role="alert">
+                        <span class="slds-assistive-text">Warning</span>
+                        No fields are configured for this plan. Ask your admin to set them up first.
+                    </div>
+                </template>
+
+                <div class="slds-m-top_medium">
+                    <lightning-button
+                        label="Back"
+                        onclick={handleBack}
+                        class="slds-m-right_small"
+                        disabled={isSaving}
+                    ></lightning-button>
+                    <lightning-button
+                        variant="brand"
+                        label={submitLabel}
+                        onclick={handleSubmit}
+                        disabled={isSubmitDisabled}
+                    ></lightning-button>
+                </div>
+
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

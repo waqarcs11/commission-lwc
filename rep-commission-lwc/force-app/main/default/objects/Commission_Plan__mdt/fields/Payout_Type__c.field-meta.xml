@@ -19,6 +19,16 @@
                 <default>false</default>
                 <label>Amount</label>
             </value>
+            <value>
+                <fullName>Dollar</fullName>
+                <default>false</default>
+                <label>Dollar</label>
+            </value>
+            <value>
+                <fullName>Currency</fullName>
+                <default>false</default>
+                <label>Currency</label>
+            </value>
         </valueSetDefinition>
     </valueSet>
 </CustomField>
