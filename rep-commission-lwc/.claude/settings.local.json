@@ -19,7 +19,12 @@
       "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_2.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_2.md-meta.xml\")",
       "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_3.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Units_Tier_3.md-meta.xml\")",
       "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_6.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_6.md-meta.xml\")",
-      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\")"
+      "Bash(cp \"E:\\\\xampp\\\\htdocs\\\\commission_module\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\" \"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\force-app\\\\main\\\\default\\\\customMetadata\\\\Commission_Tier.CPM_Unit_Tier_8.md-meta.xml\")",
+      "Bash(1:*)",
+      "Bash(\"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\manifest\\\\destructiveChanges.xml\":*)",
+      "Bash(sf package:*)",
+      "Bash(where sf:*)",
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" package:*)"
     ]
   }
 }

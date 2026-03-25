@@ -29,19 +29,39 @@ private class CommissionPlanAdminControllerTest {
 
     @IsTest
     static void testGetAvailableFields_returnsExpectedFields() {
-        Test.startTest();
-        List<CommissionPlanAdminController.FieldInfo> fields =
-            CommissionPlanAdminController.getAvailableFields();
-        Test.stopTest();
+        // Create a test user with the Commission_Plan_Admin permission set
+        // so that FLS is granted before calling getAvailableFields()
+        Profile p = [SELECT Id FROM Profile WHERE Name = 'System Administrator' LIMIT 1];
+        User testUser = new User(
+            FirstName = 'Test', LastName = 'Admin',
+            Email = 'commtest@example.com',
+            Username = 'commtest' + System.currentTimeMillis() + '@example.com',
+            Alias = 'ctest',
+            TimeZoneSidKey = 'America/Los_Angeles',
+            LocaleSidKey = 'en_US',
+            EmailEncodingKey = 'UTF-8',
+            ProfileId = p.Id,
+            LanguageLocaleKey = 'en_US'
+        );
+        insert testUser;
 
-        System.assertNotEquals(null, fields, 'getAvailableFields should return a non-null list');
-        System.assert(!fields.isEmpty(), 'Expected at least one accessible field on Representative_Commission__c');
+        PermissionSet ps = [SELECT Id FROM PermissionSet WHERE Name = 'Commission_Plan_Admin' LIMIT 1];
+        insert new PermissionSetAssignment(AssigneeId = testUser.Id, PermissionSetId = ps.Id);
 
-        // Verify wrapper fields are populated
-        for (CommissionPlanAdminController.FieldInfo fi : fields) {
-            System.assertNotEquals(null, fi.apiName, 'apiName should not be null');
-            System.assertNotEquals(null, fi.label,   'label should not be null');
-            System.assert(fi.apiName.endsWith('__c'), 'Only custom fields should be returned');
+        System.runAs(testUser) {
+            Test.startTest();
+            List<CommissionPlanAdminController.FieldInfo> fields =
+                CommissionPlanAdminController.getAvailableFields();
+            Test.stopTest();
+
+            System.assertNotEquals(null, fields, 'getAvailableFields should return a non-null list');
+            System.assert(!fields.isEmpty(), 'Expected at least one accessible field on Representative_Commission__c');
+
+            for (CommissionPlanAdminController.FieldInfo fi : fields) {
+                System.assertNotEquals(null, fi.apiName, 'apiName should not be null');
+                System.assertNotEquals(null, fi.label,   'label should not be null');
+                System.assert(fi.apiName.endsWith('__c'), 'Only custom fields should be returned');
+            }
         }
     }
 

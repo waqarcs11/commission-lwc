@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomApplication xmlns="http://soap.sforce.com/2006/04/metadata">
+    <label>Commission Management</label>
+    <description>Rep Commission entry, record management, and plan configuration</description>
+    <uiType>Lightning</uiType>
+    <navType>Standard</navType>
+    <formFactors>Large</formFactors>
+<tabs>standard-home</tabs>
+    <tabs>Commission_Entry</tabs>
+    <tabs>Commission_Plan_Admin</tabs>
+    <tabs>Representative_Commission__c</tabs>
+</CustomApplication>

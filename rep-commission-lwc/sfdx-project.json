@@ -1,16 +1,20 @@
 {
   "packageDirectories": [
     {
-      "path": "force-app",
-      "default": true,
-      "package": "Commission LWC",
       "versionName": "Version 1.0",
       "versionNumber": "1.0.0.NEXT",
-      "definitionFile": "config/project-scratch-def.json"
+      "versionDescription": "Initial release - Commission entry, plan field config, calculation engine, and tiers",
+      "path": "force-app",
+      "default": true,
+      "package": "Commission LWC"
     }
   ],
   "name": "rep-commission-lwc",
   "namespace": "",
   "sfdcLoginUrl": "https://login.salesforce.com",
-  "sourceApiVersion": "64.0"
+  "sourceApiVersion": "64.0",
+  "packageAliases": {
+    "Commission LWC": "0HoPU00000004Ev0AI",
+    "Commission LWC@1.0.0-1": "04tPU000002JXgfYAG"
+  }
 }
