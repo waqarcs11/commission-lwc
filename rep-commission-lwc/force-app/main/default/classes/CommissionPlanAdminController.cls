@@ -2,10 +2,10 @@ public with sharing class CommissionPlanAdminController {
 
     // Returns all Commission Plan custom metadata records
     @AuraEnabled(cacheable=true)
-    public static List<Commission_Plan__mdt> getPlans() {
+    public static List<RC_Commission_Plan__mdt> getPlans() {
         return [
             SELECT Id, Label, DeveloperName, Payout_Type__c
-            FROM Commission_Plan__mdt
+            FROM RC_Commission_Plan__mdt
             ORDER BY Label
         ];
     }
@@ -92,13 +92,13 @@ public with sharing class CommissionPlanAdminController {
         List<TierInfo> tiers = new List<TierInfo>();
         if (String.isBlank(planDeveloperName)) return tiers;
 
-        for (Commission_Tier__mdt tier : [
+        for (RC_Commission_Tier__mdt tier : [
             SELECT Commission_Plan__r.DeveloperName,
                    Lowest_of_Funded_Unit_Against_Eligible__c,
                    Upper_of_Funded_Units_Against_Eligible__c,
                    Plan_Tier_Payout__c,
                    Payout_Type__c
-            FROM Commission_Tier__mdt
+            FROM RC_Commission_Tier__mdt
             ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c ASC NULLS LAST
         ]) {
             if (tier.Commission_Plan__r.DeveloperName == planDeveloperName) {

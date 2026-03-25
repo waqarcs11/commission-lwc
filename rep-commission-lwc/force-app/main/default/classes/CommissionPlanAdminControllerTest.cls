@@ -17,7 +17,7 @@ private class CommissionPlanAdminControllerTest {
     @IsTest
     static void testGetPlans_returnsList() {
         Test.startTest();
-        List<Commission_Plan__mdt> plans = CommissionPlanAdminController.getPlans();
+        List<RC_Commission_Plan__mdt> plans = CommissionPlanAdminController.getPlans();
         Test.stopTest();
 
         // Custom metadata types may or may not exist in the test context.

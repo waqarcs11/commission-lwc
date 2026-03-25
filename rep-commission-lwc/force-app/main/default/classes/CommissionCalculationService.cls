@@ -44,7 +44,7 @@ public with sharing class CommissionCalculationService {
         }
         if (planNames.isEmpty()) return;
 
-        Map<String, List<Commission_Tier__mdt>> tiersByPlan = loadTiers(planNames);
+        Map<String, List<RC_Commission_Tier__mdt>> tiersByPlan = loadTiers(planNames);
         Map<String, Set<String>> configuredFieldsByPlan = loadConfiguredFields(planNames);
 
         // Build owner name map for name auto-generation
@@ -98,7 +98,7 @@ public with sharing class CommissionCalculationService {
     }
 
     private static void calculate(Representative_Commission__c rec,
-                                   List<Commission_Tier__mdt> tiers) {
+                                   List<RC_Commission_Tier__mdt> tiers) {
         String plan = rec.Commission_Plan_Developer_Name__c;
 
         // --- Attainment ---
@@ -113,7 +113,7 @@ public with sharing class CommissionCalculationService {
         rec.Attainment_Calc__c = attainment;
 
         // --- Tier match ---
-        Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
+        RC_Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
         Decimal tierPayout = 0;
         if (matchedTier != null) {
             rec.Tier_Lower_Calc__c = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
@@ -226,9 +226,9 @@ public with sharing class CommissionCalculationService {
         rec.Final_Commission_Calc__c              = null;
     }
 
-    private static Commission_Tier__mdt findTier(List<Commission_Tier__mdt> tiers, Decimal attainment) {
+    private static RC_Commission_Tier__mdt findTier(List<RC_Commission_Tier__mdt> tiers, Decimal attainment) {
         if (tiers == null) return null;
-        for (Commission_Tier__mdt tier : tiers) {
+        for (RC_Commission_Tier__mdt tier : tiers) {
             Decimal lower = tier.Lowest_of_Funded_Unit_Against_Eligible__c != null
                 ? tier.Lowest_of_Funded_Unit_Against_Eligible__c : 0;
             Decimal upper = tier.Upper_of_Funded_Units_Against_Eligible__c != null
@@ -238,22 +238,22 @@ public with sharing class CommissionCalculationService {
         return null;
     }
 
-    private static Map<String, List<Commission_Tier__mdt>> loadTiers(Set<String> planNames) {
-        Map<String, List<Commission_Tier__mdt>> result = new Map<String, List<Commission_Tier__mdt>>();
+    private static Map<String, List<RC_Commission_Tier__mdt>> loadTiers(Set<String> planNames) {
+        Map<String, List<RC_Commission_Tier__mdt>> result = new Map<String, List<RC_Commission_Tier__mdt>>();
         // CMT relationship traversal in WHERE is not supported — fetch all tiers and filter in Apex
-        for (Commission_Tier__mdt tier : [
+        for (RC_Commission_Tier__mdt tier : [
             SELECT Commission_Plan__r.DeveloperName,
                    Lowest_of_Funded_Unit_Against_Eligible__c,
                    Upper_of_Funded_Units_Against_Eligible__c,
                    Plan_Tier_Payout__c,
                    Payout_Type__c
-            FROM Commission_Tier__mdt
+            FROM RC_Commission_Tier__mdt
             ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c
         ]) {
             String planKey = tier.Commission_Plan__r.DeveloperName;
             if (!planNames.contains(planKey)) continue;
             if (!result.containsKey(planKey)) {
-                result.put(planKey, new List<Commission_Tier__mdt>());
+                result.put(planKey, new List<RC_Commission_Tier__mdt>());
             }
             result.get(planKey).add(tier);
         }

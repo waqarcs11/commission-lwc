@@ -24,7 +24,16 @@
       "Bash(\"E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc\\\\manifest\\\\destructiveChanges.xml\":*)",
       "Bash(sf package:*)",
       "Bash(where sf:*)",
-      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" package:*)"
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" package:*)",
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" project:*)",
+      "Bash(mkdir -p /tmp/destructive_delete)",
+      "Bash(/tmp/destructive_delete/destructiveChanges.xml:*)",
+      "Bash(__NEW_LINE_6d27202ff07f24a0__ cat:*)",
+      "Bash(/tmp/destructive_delete/package.xml:*)",
+      "Bash(__NEW_LINE_6d27202ff07f24a0__ echo:*)",
+      "Bash(C:/Users/adskn/AppData/Roaming/npm/sf.cmd deploy:*)",
+      "Bash(C:/Users/adskn/AppData/Roaming/npm/sf.cmd package:*)",
+      "Bash(C:/Users/adskn/AppData/Roaming/npm/sf.cmd project:*)"
     ]
   }
 }

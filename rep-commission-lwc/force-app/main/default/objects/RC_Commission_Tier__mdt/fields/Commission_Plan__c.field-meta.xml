@@ -3,7 +3,7 @@
     <fullName>Commission_Plan__c</fullName>
     <fieldManageability>DeveloperControlled</fieldManageability>
     <label>Commission Plan</label>
-    <referenceTo>Commission_Plan__mdt</referenceTo>
+    <referenceTo>RC_Commission_Plan__mdt</referenceTo>
     <relationshipLabel>Commission Tiers</relationshipLabel>
     <relationshipName>Commission_Tiers</relationshipName>
     <required>false</required>

@@ -17,10 +17,10 @@ public with sharing class CommissionEntryController {
 
     // Returns all commission plans from custom metadata
     @AuraEnabled(cacheable=true)
-    public static List<Commission_Plan__mdt> getCommissionPlans() {
+    public static List<RC_Commission_Plan__mdt> getCommissionPlans() {
         return [
             SELECT Label, DeveloperName, Payout_Type__c
-            FROM Commission_Plan__mdt
+            FROM RC_Commission_Plan__mdt
             ORDER BY Label
         ];
     }
