@@ -189,7 +189,7 @@ The module is packaged and ready to install. Share this link with your Salesforc
 
 **Installation URL:**
 ```
-https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002Jc0PYAS
+https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002JcEvYAK
 ```
 
 After installation, the administrator needs to complete 4 short setup steps — full instructions are provided in the separate **Post-Install Setup Guide** document attached to this email.

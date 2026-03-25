@@ -6,13 +6,13 @@
 |---|---|
 | **Package Name** | Commission LWC |
 | **Package ID** | 0HoPU00000004Ev0AI |
-| **Latest Version** | 1.0.0-3 |
-| **Version ID** | 04tPU000002Jc0PYAS |
-| **Installation URL** | https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002Jc0PYAS |
+| **Latest Version** | 1.0.0-4 |
+| **Version ID** | 04tPU000002JcEvYAK |
+| **Installation URL** | https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002JcEvYAK |
 
 To install via Salesforce CLI:
 ```bash
-sf package install --package 04tPU000002Jc0PYAS --target-org <your-org-alias> --wait 10
+sf package install --package 04tPU000002JcEvYAK --target-org <your-org-alias> --wait 10
 ```
 
 ---
