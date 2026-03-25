@@ -31,7 +31,7 @@ The system handles:
 | Plan | Description |
 |------|-------------|
 | **Cardiff PM Comp** | Cardiff deal margin + brokered components + tier payout |
-| **Brokered PM Comp** | Base commission × tier percentage + termed deal components |
+| **Brokered PM Comp** | Deal Margin × tier percentage + termed deal components |
 | **Brokered CRR Comp** | Flat dollar tier payout based on funded/eligible unit attainment |
 | **Assistant Renewals Director Comp** | Flat dollar tier + brokered + team closing ratio bonus |
 | **CRF CRR Comp** | Flat dollar tier + team margin components |
@@ -99,14 +99,17 @@ There is also a **Back to List** button so users can navigate back to the full c
 
 ### 4. Commission Management App
 
-A dedicated **Commission Management** app has been added to Salesforce. Users with the correct permission can access it from the App Launcher. It contains two tabs:
+A dedicated **Commission Management** app has been added to Salesforce. Users with the correct permission can access it from the App Launcher. It contains three tabs:
 
-- **Commission Entry** — the data entry screen
-- **Commission Plan Field Config** — the admin configuration screen
+- **Commission Entry** — the data entry screen for entering monthly rep commission data
+- **Commission Plan Field Config** — the admin configuration screen for managing which fields belong to each plan
+- **Representative Commissions** — a full list view of all commission records that have been entered, where you can search, filter, and open any individual record to review its calculated results
 
 > **[SCREENSHOT PLACEHOLDER — App Launcher showing Commission Management app]**
 
-> **[SCREENSHOT PLACEHOLDER — Commission Management app with both tabs visible]**
+> **[SCREENSHOT PLACEHOLDER — Commission Management app with all three tabs visible]**
+
+> **[SCREENSHOT PLACEHOLDER — Representative Commissions tab showing the list of all entered records]**
 
 ---
 
@@ -122,7 +125,7 @@ When a commission record is saved, a Salesforce trigger fires automatically and 
 | Brokered Commission | Brokered Margin Amount × Brokered Margin % |
 | Team Closing Ratio Commission | >75% = $3,000 / 70–75% = $1,000 / below = $0 |
 | Team Margin Commission | Team Margin Amount × Team Margin % |
-| Deal Margin Commission | Base Commission × Tier % (BPM/Proposed) or flat tier dollar (CRR/ARD/Cardiff) |
+| Deal Margin Commission | Deal Margin × Tier % (BPM/Proposed) or flat tier dollar (CRR/ARD/Cardiff) |
 | Termed Deal Commission | Termed Deal Margin Amount × Termed Deal Margin % |
 | Cardiff Commission | Cardiff Margin Amount × Cardiff Margin % |
 | 60 Day Termed Commission | 60-Day Termed Margin Amount × 60-Day Termed Margin % |
@@ -150,6 +153,36 @@ The previous system used **Salesforce Flows** to manage commission logic. While 
 | **Auditability** | No change history — hard to know who changed what | Every change is tracked in git with a timestamp and description |
 
 In short: **with the new system, you own the logic**. Nothing is buried inside Salesforce. If a tier value changes, a new field needs to be added, or a calculation formula needs adjusting — we make the change in the code, test it, and deploy. We are not clicking around inside production Salesforce.
+
+---
+
+## Why a Package Is Better Than Sandbox → Change Set → Production
+
+If you have worked with Salesforce customisations before, you may be familiar with the traditional process: make changes in a sandbox, build a change set, deploy it to production, and hope nothing breaks. That process has been the standard for years — but it comes with real pain points. Here is why the package approach is a significant improvement:
+
+### The Old Way — Sandbox & Change Sets
+
+- **Manual and error-prone:** Change sets require you to manually pick every component you want to move — miss one field or one class and the deployment fails in production
+- **No rollback:** Once a change set is deployed to production, there is no undo button. If something breaks, you have to manually reverse each change one by one
+- **Invisible dependencies:** Change sets do not always warn you about missing dependencies. You can deploy successfully to sandbox and still fail in production due to configuration differences
+- **Hard to repeat:** Every time you need to deploy the same thing to a different org, you have to build the change set again from scratch
+- **No version history:** There is no record of what was in change set version 1 versus version 2 — everything is tracked manually if at all
+- **Requires sandbox licence:** You need a sandbox environment, which has its own costs and maintenance overhead
+
+### The New Way — Unlocked Package
+
+- **One-click install:** Share a single URL. The customer clicks it, selects their org, and everything is installed automatically — all objects, fields, Apex, LWCs, metadata, permission sets, and the app. Nothing is missed
+- **Versioned:** Every release is a numbered version (1.0.0-1, 1.0.0-2, etc.). You always know exactly what version is installed in which org and what changed between versions
+- **Repeatable:** Install the exact same package in 10 different customer orgs with the same URL — each one gets an identical, consistent setup
+- **Safe updates:** When we release a new version, the customer simply runs the install URL again. Salesforce upgrades only what has changed and leaves everything else untouched
+- **Clean and complete uninstall:** If the customer ever decides they no longer want the module, they uninstall the package in one step and every single component — every object, field, class, LWC, app, and permission set — is removed cleanly from their org. Nothing is left behind. This is simply not possible with change sets, where you would have to manually delete every component one by one
+
+### What This Means for You as the Customer
+
+- You do not need a sandbox to receive updates — the package handles it
+- You do not need to involve your internal Salesforce team to manage deployments
+- If you want to test a new version before applying it, you can install it in a sandbox using the same URL — then install to production when ready
+- If you ever want to stop using the module, one click removes everything. Your org is left exactly as it was before installation
 
 ---
 
