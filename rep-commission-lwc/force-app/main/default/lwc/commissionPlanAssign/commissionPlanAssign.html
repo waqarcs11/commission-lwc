@@ -1,0 +1,66 @@
+<template>
+    <lightning-card title="Assign Commission Plans" icon-name="standard:user">
+        <div class="slds-p-around_medium">
+
+            <!-- Loading spinner (initial load) -->
+            <template if:true={isLoading}>
+                <lightning-spinner alternative-text="Loading users" size="medium"></lightning-spinner>
+            </template>
+
+            <template if:false={isLoading}>
+
+                <!-- Header: unsaved badge + save button -->
+                <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
+                    <div class="slds-col slds-align-middle">
+                        <template if:true={hasDirtyRows}>
+                            <span class="slds-badge unsaved-badge">
+                                {dirtyCount} unsaved change(s)
+                            </span>
+                        </template>
+                    </div>
+                    <div class="slds-col slds-no-flex">
+                        <lightning-button
+                            variant="brand"
+                            label={saveButtonLabel}
+                            icon-name="utility:save"
+                            onclick={handleSave}
+                            disabled={isSaveDisabled}
+                        ></lightning-button>
+                    </div>
+                </div>
+
+                <!-- User / plan table -->
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered assign-table">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th scope="col" class="slds-text-title_caps">User</th>
+                            <th scope="col" class="slds-text-title_caps">Commission Plan</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template for:each={userRows} for:item="row">
+                            <tr key={row.userId} class={row.rowClass}>
+                                <td>
+                                    <span class="slds-truncate">{row.userName}</span>
+                                </td>
+                                <td>
+                                    <lightning-combobox
+                                        label="Commission Plan"
+                                        variant="label-hidden"
+                                        placeholder="-- None --"
+                                        value={row.currentPlan}
+                                        options={planOptions}
+                                        data-userid={row.userId}
+                                        onchange={handlePlanChange}
+                                    ></lightning-combobox>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+
+            </template>
+
+        </div>
+    </lightning-card>
+</template>

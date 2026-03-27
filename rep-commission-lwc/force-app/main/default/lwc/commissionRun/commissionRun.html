@@ -1,0 +1,84 @@
+<template>
+    <lightning-card title="Run Commission for Month" icon-name="standard:process">
+        <div class="slds-p-around_medium">
+
+            <!-- Plan + Month selectors -->
+            <div class="slds-form slds-form_stacked slds-m-bottom_medium">
+
+                <lightning-combobox
+                    label="Commission Plan"
+                    placeholder="-- Select a Plan --"
+                    value={selectedPlan}
+                    options={planOptions}
+                    onchange={handlePlanChange}
+                    required
+                    class="slds-m-bottom_small"
+                ></lightning-combobox>
+
+                <lightning-input
+                    type="month"
+                    label="Month"
+                    value={selectedMonth}
+                    onchange={handleMonthChange}
+                    required
+                    class="slds-m-bottom_small"
+                ></lightning-input>
+
+            </div>
+
+            <!-- Reps preview -->
+            <template if:true={showRepList}>
+                <div class="slds-box slds-m-bottom_medium">
+                    <p class="slds-text-heading_small slds-m-bottom_small">
+                        Reps assigned to this plan ({repCount})
+                    </p>
+
+                    <template if:true={isLoadingReps}>
+                        <lightning-spinner alternative-text="Loading reps" size="small"></lightning-spinner>
+                    </template>
+
+                    <template if:false={isLoadingReps}>
+                        <template if:true={hasReps}>
+                            <ul class="slds-list_dotted">
+                                <template for:each={repList} for:item="rep">
+                                    <li key={rep.id}>{rep.name}</li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template if:false={hasReps}>
+                            <p class="slds-text-color_weak">
+                                No active users are assigned to this plan yet.
+                                Go to a user record and set their Commission Plan field first.
+                            </p>
+                        </template>
+                    </template>
+                </div>
+            </template>
+
+            <!-- Result summary after run -->
+            <template if:true={showResult}>
+                <div class="slds-notify slds-notify_alert slds-theme_success slds-m-bottom_medium" role="alert">
+                    <p><strong>Run complete.</strong></p>
+                    <p>{resultCreated} record(s) created &nbsp;·&nbsp; {resultSkipped} already existed (skipped).</p>
+                </div>
+            </template>
+
+            <!-- Action buttons -->
+            <div class="slds-m-top_medium">
+                <lightning-button
+                    variant="brand"
+                    label="Run for Month"
+                    icon-name="utility:play"
+                    onclick={handleRun}
+                    disabled={isRunDisabled}
+                    class="slds-m-right_small"
+                ></lightning-button>
+                <lightning-button
+                    label="Reset"
+                    onclick={handleReset}
+                ></lightning-button>
+            </div>
+
+        </div>
+    </lightning-card>
+</template>

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Profile xmlns="http://soap.sforce.com/2006/04/metadata">
+    <!-- Grant System Administrator profile edit access to the Commission Plan field on User.
+         This ensures the field is editable from the Setup > Users page without requiring
+         manual FLS configuration after install. -->
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>User.Commission_Plan__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+
+    <!-- Make all Commission Management tabs visible for System Administrator -->
+    <tabVisibilities>
+        <tab>Commission_Entry</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Commission_Run</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Commission_Plan_Assign</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Commission_Plan_Admin</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
+        <tab>Representative_Commission__c</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+</Profile>

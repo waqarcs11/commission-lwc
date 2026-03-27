@@ -44,13 +44,34 @@ The package installs a custom app called **Commission Management**. If it is not
 4. Move your profile (e.g. System Administrator) to the **Selected Profiles** list
 5. Click **Save**
 
-After saving, open the **App Launcher** (9-dot grid, top left), search for **Commission Management**, and you should see two tabs:
-- **Commission Entry** — for entering rep commission data
+After saving, open the **App Launcher** (9-dot grid, top left), search for **Commission Management**, and you should see these tabs:
+- **Commission Entry** — for entering rep commission data one record at a time
+- **Run Commissions** — for bulk-creating commission records for an entire team in one click
 - **Commission Plan Field Config** — for admin field configuration
 
 ---
 
-## Step 3 — Seed the Default Field Configurations
+## Step 3 — Add Commission Plan Field to the User Page Layout
+
+The package adds a **Commission Plan** field to the User object. This field stores which commission plan each rep is assigned to. It must be added to the User page layout manually so admins can set it when editing a user record.
+
+1. Go to **Setup** → search **Object Manager** → click it
+2. Click **User** → click **Page Layouts**
+3. Click the layout in use (typically **"User Layout"**)
+4. In the **Fields** palette at the top, find **Commission Plan**
+5. Drag it onto the layout in a visible section (e.g. under "Additional Information")
+6. Click **Save**
+
+> Once added, go to **Setup → Users → Users**, open any user, and you will see the **Commission Plan** field. Enter the exact `DeveloperName` of their plan (e.g. `Brokered_CRR_Comp`). This is what the system uses to assign records to the correct plan.
+
+> To find valid plan DeveloperNames, run this query in Developer Console → Query Editor:
+> ```sql
+> SELECT Label, DeveloperName FROM RC_Commission_Plan__mdt
+> ```
+
+---
+
+## Step 5 — Seed the Default Field Configurations
 
 The package includes pre-configured field selections for all 6 commission plans. Run the following code once in **Anonymous Apex** to apply the defaults.
 
@@ -78,7 +99,7 @@ This will create the default field configuration for all plans:
 
 ---
 
-## Step 4 — Set Up the Record Detail Page
+## Step 6 — Set Up the Record Detail Page
 
 The package includes a custom Lightning Record Page called **Representative Commission Record Page**. After installation it exists in your org but is not yet active — you need to assign it as the default page for `Representative_Commission__c` records.
 
@@ -107,17 +128,21 @@ The package includes a custom Lightning Record Page called **Representative Comm
 
 ---
 
-## Step 5 — Verify Everything Works
+## Step 7 — Verify Everything Works
 
 1. Open the **Commission Management** app from the App Launcher
 2. Click the **Commission Plan Field Config** tab
    - Select a plan from the dropdown
-   - You should see checkboxes for data entry fields (defaults already selected from Step 3)
+   - You should see checkboxes for data entry fields (defaults already selected from Step 5)
 3. Click the **Commission Entry** tab
    - Select a rep, a month, and a plan
    - Click Next — only the fields configured for that plan should appear
    - Enter values and click Submit
    - Open the created record — calculations should be filled in automatically
+4. Click the **Run Commissions** tab
+   - Select a plan — you should see the list of reps assigned to it
+   - Select a month and click **Run for Month**
+   - Records are created for all reps; anyone who already has one for that month is skipped
 
 ---
 
@@ -127,9 +152,11 @@ The package includes a custom Lightning Record Page called **Representative Comm
 |-------|-------|-----|
 | Commission Management app not visible | App not assigned to profile | Complete Step 2 |
 | "Insufficient Privileges" error | Permission set not assigned | Complete Step 1 |
-| No fields shown in Commission Entry after selecting a plan | Field config not seeded | Complete Step 3 |
-| Commission Entry shows all fields instead of plan-specific ones | Record Page not set as Org Default | Complete Step 4 |
-| Calculations are not populating | Record Page not set as Org Default | Complete Step 4 |
+| Commission Plan field not visible on User record | Field not added to User page layout | Complete Step 3 |
+| Run Commissions tab shows no reps after selecting a plan | Commission Plan field not set on user records | Complete Step 3, then assign plans to users |
+| No fields shown in Commission Entry after selecting a plan | Field config not seeded | Complete Step 5 |
+| Commission Entry shows all fields instead of plan-specific ones | Record Page not set as Org Default | Complete Step 6 |
+| Calculations are not populating | Record Page not set as Org Default | Complete Step 6 |
 | No plans in the dropdown | RC_Commission_Plan__mdt records missing | Contact your package administrator |
 
 ---
@@ -174,7 +201,7 @@ The uninstall runs in the background. You will receive an email when it is compl
 - All `Commission_Plan_Field_Config__c` records and the object itself
 - All `RC_Commission_Plan__mdt` and `RC_Commission_Tier__mdt` metadata types and their records
 - All Apex classes (`CommissionCalculationService`, `CommissionEntryController`, `CommissionPlanAdminController`, etc.)
-- All Lightning Web Components (`commissionEntry`, `commissionPlanAdmin`, `repCommissionRecord`)
+- All Lightning Web Components (`commissionEntry`, `commissionRun`, `commissionPlanAdmin`, `repCommissionRecord`)
 - The `Commission Management` custom app and its tabs
 - The `Commission Plan Admin` permission set
 

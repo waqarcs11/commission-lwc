@@ -1,0 +1,27 @@
+/* Highlight rows with unsaved changes */
+.dirty-row {
+    background-color: #fef9e7;
+    border-left: 3px solid #e6a817;
+}
+
+.dirty-row:hover {
+    background-color: #fdf3c8;
+}
+
+/* Unsaved count badge */
+.unsaved-badge {
+    background-color: #e6a817;
+    color: #080707;
+    font-weight: 600;
+}
+
+/* Table fills card width with even column split */
+.assign-table {
+    width: 100%;
+    table-layout: fixed;
+}
+
+.assign-table th:first-child,
+.assign-table td:first-child {
+    width: 50%;
+}

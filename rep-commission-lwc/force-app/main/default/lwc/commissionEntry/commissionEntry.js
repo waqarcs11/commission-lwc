@@ -95,7 +95,12 @@ export default class CommissionEntry extends LightningElement {
     loadUsers() {
         getActiveUsers()
             .then(users => {
-                this.userOptions = users.map(u => ({ label: u.name, value: u.id }));
+                // Store commissionPlan alongside id/name so we can auto-select on user change
+                this.userOptions = users.map(u => ({
+                    label: u.name,
+                    value: u.id,
+                    commissionPlan: u.commissionPlan
+                }));
             })
             .catch(error => this.showToast('Error', this.extractMessage(error), 'error'));
     }
@@ -111,9 +116,16 @@ export default class CommissionEntry extends LightningElement {
     // ── Step 1 handlers ───────────────────────────────────────────────────────
 
     handleUserChange(event) {
-        this.selectedUserId  = event.detail.value;
-        const match          = this.userOptions.find(u => u.value === this.selectedUserId);
+        this.selectedUserId   = event.detail.value;
+        const match           = this.userOptions.find(u => u.value === this.selectedUserId);
         this.selectedUserName = match ? match.label : '';
+
+        // Auto-select the plan assigned to this user if they have one
+        if (match && match.commissionPlan) {
+            this.selectedPlan = match.commissionPlan;
+            const planMatch   = this.planOptions.find(p => p.value === this.selectedPlan);
+            this.selectedPlanLabel = planMatch ? planMatch.label : this.selectedPlan;
+        }
     }
 
     handleMonthChange(event) {

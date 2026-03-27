@@ -230,4 +230,33 @@
         <field>Representative_Commission__c.Final_Commission_Calc__c</field>
         <readable>true</readable>
     </fieldPermissions>
+
+    <!-- User field — Commission Plan assignment -->
+    <fieldPermissions>
+        <editable>true</editable>
+        <field>User.Commission_Plan__c</field>
+        <readable>true</readable>
+    </fieldPermissions>
+
+    <!-- Tab visibility — ensures all tabs are visible when permission set is assigned -->
+    <tabSettings>
+        <tab>Commission_Entry</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Commission_Run</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Commission_Plan_Assign</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Commission_Plan_Admin</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
+        <tab>Representative_Commission__c</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
 </PermissionSet>

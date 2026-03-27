@@ -5,8 +5,10 @@
     <uiType>Lightning</uiType>
     <navType>Standard</navType>
     <formFactors>Large</formFactors>
-<tabs>standard-home</tabs>
+    <tabs>standard-home</tabs>
     <tabs>Commission_Entry</tabs>
+    <tabs>Commission_Run</tabs>
+    <tabs>Commission_Plan_Assign</tabs>
     <tabs>Commission_Plan_Admin</tabs>
     <tabs>Representative_Commission__c</tabs>
 </CustomApplication>
