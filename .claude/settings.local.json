@@ -8,7 +8,12 @@
       "Bash(cmd /c \"sf data query --query \\\\\"SELECT Id, SobjectType, Field, PermissionsEdit, PermissionsRead FROM FieldPermissions WHERE Field = 'User.Commission_Plan__c'\\\\\" --target-org MyCommissionOrg\" 2>&1)",
       "Bash(cmd /c \"sf data query --query \\\\\"SELECT Id, SobjectType, Field, PermissionsEdit, PermissionsRead FROM FieldPermissions WHERE Field = 'User.Commission_Plan__c'\\\\\" --target-org MyCommissionOrg --json\")",
       "Bash(cmd /c \"sf apex run --target-org MyCommissionOrg --apex-code \\\\\"System.debug\\([SELECT Id, Name, Commission_Plan__c FROM User WHERE IsActive = true LIMIT 3]\\);\\\\\"\")",
-      "Bash(sf apex:*)"
+      "Bash(sf apex:*)",
+      "Bash(sf package:*)",
+      "Bash(cmd /c \"cd /d E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc && sf package version create --package \\\\\"Commission LWC\\\\\" --installation-key-bypass --wait 20 --target-dev-hub MyCommissionOrg 2>&1\")",
+      "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version create --package 'Commission LWC' --installation-key-bypass --wait 20 --target-dev-hub MyCommissionOrg 2>&1\")",
+      "Bash(powershell -Command \"sf org list 2>&1\")",
+      "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version create --package 'Commission LWC' --installation-key-bypass --wait 20 --target-dev-hub goodman-pbo 2>&1\")"
     ]
   }
 }
