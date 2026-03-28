@@ -6,21 +6,21 @@
 |---|---|
 | **Package Name** | Commission LWC |
 | **Package ID** | 0HoPU00000004Ev0AI |
-| **Latest Version** | 1.1.0-1 |
-| **Version ID** | 04tPU000002KC5VYAW |
-| **Installation URL** | https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002KC5VYAW |
+| **Latest Version** | 1.1.0-2 |
+| **Version ID** | 04tPU000002KQzhYAG |
+| **Installation URL** | https://login.salesforce.com/packaging/installPackage.apexp?p0=04tPU000002KQzhYAG |
 
 To install via Salesforce CLI:
 ```bash
-sf package install --package 04tPU000002KC5VYAW --target-org <your-org-alias> --wait 10
+sf package install --package 04tPU000002KQzhYAG --target-org <your-org-alias> --wait 10
 ```
 
 ### Version History
 
-| Version | Version ID | What's included |
-|---------|------------|-----------------|
-| 1.1.0-1 | 04tPU000002KC5VYAW | Bulk commission run, user plan assignment UI, auto tab visibility, system user fix |
-| 1.0.0-4 | 04tPU000002JcEvYAK | Initial release — Commission entry, plan field config, calculation engine, tiers |
+| Version | Version ID | Status | What's included |
+|---------|------------|--------|-----------------|
+| 1.1.0-2 | 04tPU000002KQzhYAG | Released | Bulk commission run, user plan assignment UI, auto tab visibility, system user fix |
+| 1.0.0-4 | 04tPU000002JcEvYAK | Released | Initial release — Commission entry, plan field config, calculation engine, tiers |
 
 ---
 
