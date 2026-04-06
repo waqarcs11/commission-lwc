@@ -16,7 +16,11 @@
       "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version create --package 'Commission LWC' --installation-key-bypass --wait 20 --target-dev-hub goodman-pbo 2>&1\")",
       "Bash(powershell -Command \"sf package version promote --package 04tPU000002KC5VYAW --target-dev-hub goodman-pbo --no-prompt 2>&1\")",
       "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version create --package 'Commission LWC' --installation-key-bypass --wait 20 --target-dev-hub goodman-pbo --code-coverage 2>&1\")",
-      "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version promote --package 04tPU000002KQzhYAG --target-dev-hub goodman-pbo --no-prompt 2>&1\")"
+      "Bash(powershell -Command \"Set-Location 'E:\\\\xampp\\\\htdocs\\\\commission_LWC\\\\rep-commission-lwc'; sf package version promote --package 04tPU000002KQzhYAG --target-dev-hub goodman-pbo --no-prompt 2>&1\")",
+      "Bash(powershell:*)",
+      "Bash(Select-String -Pattern \"Status:|Succeeded|Failed|Error\")",
+      "Bash(Select-Object -Last 5)",
+      "Bash(Select-String \"Status:|Succeeded|Failed|Error|Created|Changed\")"
     ]
   }
 }
