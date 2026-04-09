@@ -106,6 +106,15 @@ This will create the default field configuration for all plans:
 
 > **Customization:** You can change field selections at any time via the **Commission Plan Field Config** tab.
 
+> **Per-field settings:** Once a field is checked, click the ⚙ icon next to it to expand its configuration panel. You can set:
+> - **Usage Period** — Monthly, Quarterly, or Annual
+> - **Metric Type** — categorises the field (e.g. Month Start Target, Commission $ Output)
+> - **Default Value** — a static number pre-filled when a new commission entry is opened for this field
+> - **Report Source** — a Salesforce Report ID to pull the default value from automatically
+> - **Report Field Label** — the measure label in that report (e.g. `"Sum of Funded Amount"`)
+>
+> When both **Report Source** and **Report Field Label** are set, the system will automatically fetch the value from that report for the specific rep when a new commission entry is opened. If the report has no data for that rep, it falls back to the **Default Value**. If neither is set, the field starts blank and must be entered manually.
+
 ---
 
 ## Step 5 — Set Up the Record Detail Page

@@ -20,6 +20,7 @@ This document provides a full inventory of all Apex classes, objects, and fields
 | `saveCommission` | `@AuraEnabled` | `String saveCommission(String userId, String commissionDate, String planDeveloperName, String fieldValuesJson, String existingRecordId)` | Create or update a commission record. Pass `existingRecordId` to update, null to create. Returns record Id |
 | `runForMonth` | `@AuraEnabled` | `RunResult runForMonth(String planDeveloperName, String commissionDate)` | Bulk creates commission records for all users on a plan for a given month. Skips existing. Returns `{created, skipped}` |
 | `saveUserPlans` | `@AuraEnabled` | `String saveUserPlans(String userPlansJson)` | Bulk updates `User.Commission_Plan__c`. Accepts JSON array of `{userId, userName, planDeveloperName}`. Returns `OK:N` or throws with error detail |
+| `getDefaultValuesForUser` | `@AuraEnabled` | `Map<String, Decimal> getDefaultValuesForUser(String userId, String planDeveloperName)` | Returns default field values for a new commission entry. Fetches live values from configured Salesforce Reports via `CommissionResultsController`; falls back to static `Default_Value__c` if no report is configured. Returns `Map<fieldApiName, value>` |
 
 **Inner wrapper classes:**
 - `UserOption` — `{id, name, commissionPlan}`
@@ -140,13 +141,30 @@ One record per rep per plan per month.
 ---
 
 ### `Commission_Plan_Field_Config__c` — Field configuration per plan
-Controls which data entry fields are shown for each plan in the UI.
+Controls which data entry fields are shown for each plan in the UI, and how default values are sourced when a new commission entry is created.
 
 | Field API Name | Type | Description |
 |---|---|---|
 | `Commission_Plan_Developer_Name__c` | Text | Plan DeveloperName this config belongs to |
 | `Field_API_Name__c` | Text | API name of the field on `Representative_Commission__c` |
 | `Sort_Order__c` | Number | Display order in the UI |
+| `Usage_Period__c` | Picklist | How often this field applies — `Monthly`, `Quarterly`, `Annual` |
+| `Metric_Type__c` | Picklist | Category of this field — e.g. `Month_Start_Target`, `Tier_Lookup_Input`, `Commission_Dollar_Output_Value`. Used for integration and reporting |
+| `Default_Value__c` | Number(18,4) | Static default value pre-populated when a new commission entry is created (used if no Report Source is set) |
+| `Report_Source__c` | Text(18) | Salesforce Report ID to fetch the default value from. Must be a Summary report with a User grouping |
+| `Report_Field_Label__c` | Text(50) | The measure label in the report to map to this field (e.g. `"Sum of Funded Amount"`) |
+
+#### How default values are resolved (priority order)
+
+When a new commission entry is opened for a user, `getDefaultValuesForUser()` is called and pre-populates field values using this logic:
+
+| Priority | Condition | Source |
+|----------|-----------|--------|
+| 1 (highest) | `Report_Source__c` + `Report_Field_Label__c` both set | Live value fetched from Salesforce Report via `CommissionResultsController.buildCommissionValuesForRepsByLabel()` |
+| 2 | Only `Default_Value__c` set | Static number used as-is |
+| 3 (lowest) | Neither set | Field starts empty — user enters manually |
+
+> If the report fetch fails (report not found, no data for that user, etc.), the system falls back silently to the static `Default_Value__c` if one is set.
 
 ---
 
@@ -184,6 +202,56 @@ Controls which data entry fields are shown for each plan in the UI.
 | Field API Name | Type | Description |
 |---|---|---|
 | `Commission_Plan__c` | Text(255) | DeveloperName of the plan assigned to this rep |
+
+---
+
+## Report Integration Classes
+
+These classes provide the bridge between Salesforce Reports and commission field values. They are used internally by `getDefaultValuesForUser()` and are also available for direct use in external integrations.
+
+### `CommissionResultsController`
+Runs a Salesforce Summary report and returns structured per-rep results.
+
+| Method | Description |
+|--------|-------------|
+| `getCommissionReportData(reportId, maxRows, dataVisibility, showGrandTotalRow)` | Runs one report, returns `CommissionReportResult` with per-rep rows and measure metadata |
+| `getCommissionDataForReportIds(reportIds, ...)` | Runs multiple distinct reports in one call, returns `Map<Id, CommissionReportResult>` |
+| `buildCommissionValuesForReps(repIds, mappingAttributes, ...)` | Maps report aggregates to commission fields by **aggregate key** — returns `CommissionIngestionResult` |
+| `buildCommissionValuesForRepsByLabel(repIds, fieldMappings, ...)` | Maps report aggregates to commission fields by **human label** (e.g. `"Sum of Funded Amount"`) — returns `CommissionIngestionResult` |
+
+**Report requirements:** Summary format only; 1 or 2 row groupings; at least one numeric aggregate; User Id must be the primary (or inner) grouping.
+
+### `CommissionFieldMappingRequest`
+A single label-based mapping row passed to `buildCommissionValuesForRepsByLabel`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `targetFieldApiName` | String | The commission field to populate (e.g. `Eligible_Units__c`) |
+| `sourceReportId` | Id | The Salesforce Report to read from |
+| `sourceFieldLabel` | String | The measure label shown in the report (e.g. `"Record Count"`) |
+| `preferredAggregateType` | String | Optional disambiguator if two measures share the same label: `SUM`, `AVG`, `MIN`, `MAX`, `COUNT` |
+
+### `CommissionMappingAttribute`
+A single aggregate-key-based mapping row passed to `buildCommissionValuesForReps`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `targetFieldApiName` | String | The commission field to populate |
+| `sourceReportId` | Id | The Salesforce Report to read from |
+| `sourceAggregateKey` | String | The internal report aggregate key (e.g. `RowCount`, `s!Amount`) — must match `MeasureColumn.aggregateKey` |
+
+### `CommissionIngestionResult`
+Returned by `buildCommissionValuesForReps` and `buildCommissionValuesForRepsByLabel`.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `repRows` | `List<RepIngestionRow>` | One row per rep — contains `userId` and `fieldValues` (`Map<fieldApiName, Decimal>`) |
+| `warnings` | `List<String>` | Non-fatal issues (e.g. duplicate userId in report) |
+| `errors` | `List<String>` | Fatal issues (e.g. report not found, label not resolved) |
+
+### Supporting classes
+- **`CommissionReportResult`** — DTOs returned by `getCommissionReportData`: `MeasureColumn`, `RepData`, `ReportError`, `AggregateInfo`
+- **`CommissionParsedReport`** — Internal report parser; also used as a test seam via `CommissionResultsController.testParsedReportById`
 
 ---
 

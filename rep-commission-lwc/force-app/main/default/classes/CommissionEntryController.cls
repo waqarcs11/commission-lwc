@@ -34,7 +34,8 @@ public with sharing class CommissionEntryController {
     }
 
     // Creates commission records for all users assigned to the given plan for the given month.
-    // Skips users who already have a record for that month and plan.
+    // Skips users who already have a record for that month and plan — existing records are never modified.
+    // Pre-populates field default values from configured reports or static defaults for new records only.
     // Returns a summary of how many were created vs skipped.
     @AuraEnabled
     public static RunResult runForMonth(String planDeveloperName, String commissionDate) {
@@ -64,23 +65,114 @@ public with sharing class CommissionEntryController {
             existingUserIds.add(existing.OwnerId);
         }
 
-        // Create records only for users who don't have one yet
-        List<Representative_Commission__c> toInsert = new List<Representative_Commission__c>();
+        // Separate out only the reps who need new records
+        List<User> newReps = new List<User>();
         for (User rep : reps) {
             if (!existingUserIds.contains(rep.Id)) {
-                toInsert.add(new Representative_Commission__c(
-                    OwnerId                           = rep.Id,
-                    Commission_Month__c               = monthDate,
-                    Commission_Month_Year__c          = monthYearLabel,
-                    Commission_Plan_Developer_Name__c = planDeveloperName,
-                    Name = (planDeveloperName + ' ' + commissionDate.substring(0, 7)).abbreviate(80)
+                newReps.add(rep);
+            }
+        }
+
+        if (newReps.isEmpty()) return new RunResult(0, existingUserIds.size());
+
+        // Fetch default field values for all new reps in a single bulk report call
+        Map<Id, Map<String, Decimal>> defaultsByUserId = fetchBulkDefaults(newReps, planDeveloperName);
+
+        // Create records and apply defaults
+        List<Representative_Commission__c> toInsert = new List<Representative_Commission__c>();
+        for (User rep : newReps) {
+            Representative_Commission__c rec = new Representative_Commission__c(
+                OwnerId                           = rep.Id,
+                Commission_Month__c               = monthDate,
+                Commission_Month_Year__c          = monthYearLabel,
+                Commission_Plan_Developer_Name__c = planDeveloperName,
+                Name = (planDeveloperName + ' ' + commissionDate.substring(0, 7)).abbreviate(80)
+            );
+
+            Map<String, Decimal> fieldDefaults = defaultsByUserId.get(rep.Id);
+            if (fieldDefaults != null) {
+                for (String fieldApi : fieldDefaults.keySet()) {
+                    rec.put(fieldApi, fieldDefaults.get(fieldApi));
+                }
+            }
+
+            toInsert.add(rec);
+        }
+
+        insert toInsert;
+        return new RunResult(toInsert.size(), existingUserIds.size());
+    }
+
+    // Fetches default field values for a list of reps in one bulk report call.
+    // Returns Map<userId, Map<fieldApiName, value>>.
+    // Each user is seeded with static Default_Value__c first; report values override if present.
+    private static Map<Id, Map<String, Decimal>> fetchBulkDefaults(
+        List<User> reps,
+        String planDeveloperName
+    ) {
+        Map<Id, Map<String, Decimal>> result = new Map<Id, Map<String, Decimal>>();
+
+        List<Commission_Plan_Field_Config__c> configs = [
+            SELECT Field_API_Name__c, Report_Source__c, Report_Field_Label__c, Default_Value__c
+            FROM Commission_Plan_Field_Config__c
+            WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
+            ORDER BY Sort_Order__c ASC NULLS LAST
+        ];
+
+        if (configs.isEmpty()) return result;
+
+        // Build static defaults map once
+        Map<String, Decimal> staticDefaults = new Map<String, Decimal>();
+        for (Commission_Plan_Field_Config__c cfg : configs) {
+            if (cfg.Default_Value__c != null) {
+                staticDefaults.put(cfg.Field_API_Name__c, cfg.Default_Value__c);
+            }
+        }
+
+        // Seed every user with static defaults first
+        List<Id> repIds = new List<Id>();
+        for (User rep : reps) {
+            result.put(rep.Id, new Map<String, Decimal>(staticDefaults));
+            repIds.add(rep.Id);
+        }
+
+        // Build report mappings for fields with both Report_Source__c and Report_Field_Label__c
+        List<CommissionFieldMappingRequest> mappings = new List<CommissionFieldMappingRequest>();
+        for (Commission_Plan_Field_Config__c cfg : configs) {
+            if (String.isNotBlank(cfg.Report_Source__c) && String.isNotBlank(cfg.Report_Field_Label__c)) {
+                mappings.add(new CommissionFieldMappingRequest(
+                    cfg.Field_API_Name__c,
+                    (Id) cfg.Report_Source__c,
+                    cfg.Report_Field_Label__c,
+                    null
                 ));
             }
         }
 
-        if (!toInsert.isEmpty()) insert toInsert;
+        if (mappings.isEmpty()) return result;
 
-        return new RunResult(toInsert.size(), existingUserIds.size());
+        // One bulk call for all reps — report values override static defaults
+        try {
+            CommissionIngestionResult ingestion = CommissionResultsController.buildCommissionValuesForRepsByLabel(
+                repIds,
+                mappings
+            );
+
+            for (CommissionIngestionResult.RepIngestionRow row : ingestion.repRows) {
+                Map<String, Decimal> userDefaults = result.get((Id) row.userId);
+                if (userDefaults == null) continue;
+                for (String fieldApi : row.fieldValues.keySet()) {
+                    Object val = row.fieldValues.get(fieldApi);
+                    if (val != null) {
+                        userDefaults.put(fieldApi, (Decimal) val);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // If report fetch fails, static defaults already seeded above are used as fallback
+        }
+
+        return result;
     }
 
     // Returns all commission plans from custom metadata
@@ -269,6 +361,70 @@ public with sharing class CommissionEntryController {
         }
 
         return 'OK:' + saved;
+    }
+
+    // Returns a map of fieldApiName → default value for a new commission entry.
+    // For fields with Report_Source__c + Report_Field_Label__c: fetches live value from report.
+    // For fields with only Default_Value__c: uses the static number.
+    // Report values take priority over static defaults.
+    @AuraEnabled
+    public static Map<String, Decimal> getDefaultValuesForUser(String userId, String planDeveloperName) {
+        Map<String, Decimal> defaults = new Map<String, Decimal>();
+
+        List<Commission_Plan_Field_Config__c> configs = [
+            SELECT Field_API_Name__c, Report_Source__c, Report_Field_Label__c, Default_Value__c
+            FROM Commission_Plan_Field_Config__c
+            WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
+            ORDER BY Sort_Order__c ASC NULLS LAST
+        ];
+
+        if (configs.isEmpty()) return defaults;
+
+        // Seed static defaults first — report values will override below if present
+        for (Commission_Plan_Field_Config__c cfg : configs) {
+            if (cfg.Default_Value__c != null) {
+                defaults.put(cfg.Field_API_Name__c, cfg.Default_Value__c);
+            }
+        }
+
+        // Build report-driven mappings for fields that have both Report_Source__c and Report_Field_Label__c
+        List<CommissionFieldMappingRequest> mappings = new List<CommissionFieldMappingRequest>();
+        for (Commission_Plan_Field_Config__c cfg : configs) {
+            if (String.isNotBlank(cfg.Report_Source__c) && String.isNotBlank(cfg.Report_Field_Label__c)) {
+                mappings.add(new CommissionFieldMappingRequest(
+                    cfg.Field_API_Name__c,
+                    (Id) cfg.Report_Source__c,
+                    cfg.Report_Field_Label__c,
+                    null
+                ));
+            }
+        }
+
+        if (mappings.isEmpty()) return defaults;
+
+        // Call Ryan's class to get report-driven values for this specific user
+        try {
+            CommissionIngestionResult result = CommissionResultsController.buildCommissionValuesForRepsByLabel(
+                new List<Id>{ (Id) userId },
+                mappings
+            );
+
+            for (CommissionIngestionResult.RepIngestionRow row : result.repRows) {
+                if (row.userId == userId) {
+                    for (String fieldApi : row.fieldValues.keySet()) {
+                        Object val = row.fieldValues.get(fieldApi);
+                        if (val != null) {
+                            defaults.put(fieldApi, (Decimal) val);
+                        }
+                    }
+                    break;
+                }
+            }
+        } catch (Exception e) {
+            // If report fetch fails, static defaults already set above are returned as fallback
+        }
+
+        return defaults;
     }
 
     // ── Wrapper classes ────────────────────────────────────────────────────────

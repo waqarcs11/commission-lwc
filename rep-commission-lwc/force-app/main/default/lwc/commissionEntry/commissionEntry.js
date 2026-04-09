@@ -1,10 +1,11 @@
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getActiveUsers      from '@salesforce/apex/CommissionEntryController.getActiveUsers';
-import getCommissionPlans  from '@salesforce/apex/CommissionEntryController.getCommissionPlans';
-import getFieldsForPlan    from '@salesforce/apex/CommissionEntryController.getFieldsForPlan';
-import getExistingRecord   from '@salesforce/apex/CommissionEntryController.getExistingRecord';
-import saveCommission      from '@salesforce/apex/CommissionEntryController.saveCommission';
+import getActiveUsers          from '@salesforce/apex/CommissionEntryController.getActiveUsers';
+import getCommissionPlans      from '@salesforce/apex/CommissionEntryController.getCommissionPlans';
+import getFieldsForPlan        from '@salesforce/apex/CommissionEntryController.getFieldsForPlan';
+import getExistingRecord       from '@salesforce/apex/CommissionEntryController.getExistingRecord';
+import getDefaultValuesForUser from '@salesforce/apex/CommissionEntryController.getDefaultValuesForUser';
+import saveCommission          from '@salesforce/apex/CommissionEntryController.saveCommission';
 
 export default class CommissionEntry extends LightningElement {
 
@@ -154,17 +155,20 @@ export default class CommissionEntry extends LightningElement {
     loadFieldsAndPrefill() {
         this.isLoadingFields = true;
 
-        // Run field config + existing record check in parallel
+        // Run field config, existing record check, and default values fetch in parallel
         Promise.all([
             getFieldsForPlan({ planDeveloperName: this.selectedPlan }),
             getExistingRecord({
                 userId           : this.selectedUserId,
                 commissionDate   : this.commissionDate,
                 planDeveloperName: this.selectedPlan
+            }),
+            getDefaultValuesForUser({
+                userId           : this.selectedUserId,
+                planDeveloperName: this.selectedPlan
             })
         ])
-            .then(([fields, existingRecord]) => {
-                // Merge configured fields with any pre-existing values
+            .then(([fields, existingRecord, defaultValues]) => {
                 this.existingRecordId = existingRecord ? existingRecord.Id : null;
 
                 this.dynamicFields = fields.map(f => ({
@@ -173,7 +177,10 @@ export default class CommissionEntry extends LightningElement {
                     type     : f.type,
                     formatter: this.resolveFormatter(f.type),
                     step     : this.resolveStep(f.type),
-                    value    : existingRecord ? (existingRecord[f.apiName] ?? null) : null
+                    // Existing record takes priority; for new records use report/static defaults
+                    value    : existingRecord
+                        ? (existingRecord[f.apiName] ?? null)
+                        : (defaultValues[f.apiName] ?? null)
                 }));
             })
             .catch(error => this.showToast('Error', this.extractMessage(error), 'error'))
