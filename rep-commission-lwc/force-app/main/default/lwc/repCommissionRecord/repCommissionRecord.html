@@ -48,9 +48,9 @@
             <div class="section-header">Data Entry</div>
             <div class="slds-grid slds-wrap slds-p-horizontal_medium slds-p-bottom_small">
                 <template lwc:if={hasConfiguredFields}>
-                    <template for:each={configuredInputFields} for:item="fieldName">
-                        <div key={fieldName} class="slds-col slds-size_1-of-2">
-                            <lightning-input-field field-name={fieldName}></lightning-input-field>
+                    <template for:each={configuredInputFields} for:item="fieldConfig">
+                        <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2">
+                            <lightning-input-field field-name={fieldConfig.Field_API_Name__c}></lightning-input-field>
                         </div>
                     </template>
                 </template>
@@ -75,9 +75,9 @@
                     <span class="calc-badge">Calculated automatically &middot; Read Only</span>
                 </div>
                 <div class="calc-section slds-grid slds-wrap slds-p-horizontal_medium slds-p-bottom_small">
-                    <template for:each={configuredCalcFields} for:item="fieldName">
-                        <div key={fieldName} class="slds-col slds-size_1-of-2">
-                            <lightning-output-field field-name={fieldName}></lightning-output-field>
+                    <template for:each={configuredCalcFields} for:item="fieldConfig">
+                        <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2">
+                            <lightning-output-field field-name={fieldConfig.Field_API_Name__c}></lightning-output-field>
                         </div>
                     </template>
                 </div>

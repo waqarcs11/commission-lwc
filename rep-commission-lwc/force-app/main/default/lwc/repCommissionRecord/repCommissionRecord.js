@@ -52,11 +52,11 @@ export default class RepCommissionRecord extends NavigationMixin(LightningElemen
     }
 
     get configuredInputFields() {
-        return (this.configuredFields || []).filter(f => !f.toLowerCase().endsWith('_calc__c'));
+        return (this.configuredFields || []).filter(f => !f.Field_API_Name__c.toLowerCase().endsWith('_calc__c'));
     }
 
     get configuredCalcFields() {
-        return (this.configuredFields || []).filter(f => f.toLowerCase().endsWith('_calc__c'));
+        return (this.configuredFields || []).filter(f => f.Field_API_Name__c.toLowerCase().endsWith('_calc__c'));
     }
 
     get hasConfiguredFields() {
