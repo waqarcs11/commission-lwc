@@ -20,7 +20,14 @@
       "Bash(powershell:*)",
       "Bash(Select-String -Pattern \"Status:|Succeeded|Failed|Error\")",
       "Bash(Select-Object -Last 5)",
-      "Bash(Select-String \"Status:|Succeeded|Failed|Error|Created|Changed\")"
+      "Bash(Select-String \"Status:|Succeeded|Failed|Error|Created|Changed\")",
+      "Bash(where sf:*)",
+      "Bash(sf --version)",
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" data:*)",
+      "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(d['result']['records'][0]['Body']\\)\")",
+      "Bash(python -c ':*)",
+      "Bash(mkdir -p E:/xampp/htdocs/commission_LWC/tmp)",
+      "Bash(ls:*)"
     ]
   }
 }
