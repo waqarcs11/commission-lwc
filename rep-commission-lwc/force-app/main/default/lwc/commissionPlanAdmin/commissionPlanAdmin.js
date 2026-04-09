@@ -1,16 +1,42 @@
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getPlans from '@salesforce/apex/CommissionPlanAdminController.getPlans';
+import getPlans           from '@salesforce/apex/CommissionPlanAdminController.getPlans';
 import getAvailableFields from '@salesforce/apex/CommissionPlanAdminController.getAvailableFields';
 import getConfiguredFields from '@salesforce/apex/CommissionPlanAdminController.getConfiguredFields';
-import saveConfig from '@salesforce/apex/CommissionPlanAdminController.saveConfig';
+import saveConfig         from '@salesforce/apex/CommissionPlanAdminController.saveConfig';
+
+const USAGE_PERIOD_OPTIONS = [
+    { label: 'Monthly',   value: 'Monthly' },
+    { label: 'Quarterly', value: 'Quarterly' },
+    { label: 'Annual',    value: 'Annual' }
+];
+
+const METRIC_TYPE_OPTIONS = [
+    { label: '-- None --',                        value: '' },
+    { label: 'Month Start Target',                value: 'Month_Start_Target' },
+    { label: 'Month End Target',                  value: 'Month_End_Target' },
+    { label: 'Tier Lookup Input',                 value: 'Tier_Lookup_Input' },
+    { label: 'Tier Lookup Output $',              value: 'Tier_Lookup_Output_Dollar' },
+    { label: 'Tier Lookup Output Assumption',     value: 'Tier_Lookup_Output_Assumption' },
+    { label: 'User Input Assumption',             value: 'User_Input_Assumption' },
+    { label: 'Calculation Input Assumption',      value: 'Calculation_Input_Assumption' },
+    { label: 'User Input Commission Adjustment',  value: 'User_Input_Commission_Adjustment' },
+    { label: 'Informational Output Value',        value: 'Informational_Output_Value' },
+    { label: 'Commission $ Output Value',         value: 'Commission_Dollar_Output_Value' }
+];
 
 export default class CommissionPlanAdmin extends LightningElement {
-    @track planOptions = [];
-    @track fieldList = [];
-    @track selectedPlan = '';
-    @track isLoading = false;
-    @track isSaving = false;
+
+    @track planOptions      = [];
+    @track fieldList        = [];
+    @track selectedPlan     = '';
+    @track isLoading        = false;
+    @track isSaving         = false;
+
+    usagePeriodOptions = USAGE_PERIOD_OPTIONS;
+    metricTypeOptions  = METRIC_TYPE_OPTIONS;
+
+    // ── Getters ───────────────────────────────────────────────────────────────
 
     get showFields() {
         return this.selectedPlan && !this.isLoading && this.fieldList.length > 0;
@@ -20,7 +46,6 @@ export default class CommissionPlanAdmin extends LightningElement {
         return this.selectedPlan && !this.isLoading && this.fieldList.length === 0;
     }
 
-    // Sorted within each section; checked fields first (in their saved order), then unchecked
     get dataEntryFields() {
         return this.fieldList
             .filter(f => !f.isCalcField)
@@ -35,26 +60,17 @@ export default class CommissionPlanAdmin extends LightningElement {
             .sort((a, b) => a.sortOrder - b.sortOrder);
     }
 
-    connectedCallback() {
-        this.loadPlans();
-    }
+    // ── Lifecycle ─────────────────────────────────────────────────────────────
 
-    loadPlans() {
-        this.isLoading = true;
+    connectedCallback() {
         getPlans()
             .then(plans => {
-                this.planOptions = plans.map(p => ({
-                    label: p.Label,
-                    value: p.DeveloperName
-                }));
+                this.planOptions = plans.map(p => ({ label: p.Label, value: p.DeveloperName }));
             })
-            .catch(error => {
-                this.showToast('Error', this.extractMessage(error), 'error');
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+            .catch(error => this.showToast('Error', this.extractMessage(error), 'error'));
     }
+
+    // ── Plan selection ────────────────────────────────────────────────────────
 
     handlePlanChange(event) {
         this.selectedPlan = event.detail.value;
@@ -70,49 +86,99 @@ export default class CommissionPlanAdmin extends LightningElement {
             getConfiguredFields({ planDeveloperName: this.selectedPlan })
         ])
             .then(([available, configured]) => {
-                // configured comes back in Sort_Order__c order; use index as sort order
-                const configuredIndexMap = new Map(configured.map((apiName, idx) => [apiName, idx + 1]));
+                // Build a map of existing config by fieldApiName
+                const configMap = new Map(
+                    configured.map(c => [c.Field_API_Name__c, c])
+                );
 
-                // unchecked fields get a sort order after all checked ones
                 let uncheckedOrder = configured.length + 1;
 
                 this.fieldList = available.map(f => {
-                    const isChecked = configuredIndexMap.has(f.apiName);
+                    const existing = configMap.get(f.apiName);
+                    const isChecked = !!existing;
                     return {
-                        apiName: f.apiName,
-                        label: f.label,
-                        isCalcField: f.isCalcField,
-                        checked: isChecked,
-                        sortOrder: isChecked ? configuredIndexMap.get(f.apiName) : uncheckedOrder++
+                        apiName         : f.apiName,
+                        label           : f.label,
+                        isCalcField     : f.isCalcField,
+                        checked         : isChecked,
+                        expanded        : false,
+                        sortOrder       : isChecked ? existing.Sort_Order__c : uncheckedOrder++,
+                        // Extra config properties
+                        usagePeriod     : existing?.Usage_Period__c     || 'Monthly',
+                        metricType      : existing?.Metric_Type__c      || '',
+                        defaultValue    : existing?.Default_Value__c    ?? null,
+                        reportSource    : existing?.Report_Source__c    || '',
+                        reportFieldLabel: existing?.Report_Field_Label__c || ''
                     };
                 });
             })
-            .catch(error => {
-                this.showToast('Error', this.extractMessage(error), 'error');
-            })
-            .finally(() => {
-                this.isLoading = false;
-            });
+            .catch(error => this.showToast('Error', this.extractMessage(error), 'error'))
+            .finally(() => { this.isLoading = false; });
     }
+
+    // ── Field toggle & expand ─────────────────────────────────────────────────
 
     handleFieldToggle(event) {
         const apiName = event.target.dataset.api;
         const checked = event.target.checked;
         this.fieldList = this.fieldList.map(f =>
-            f.apiName === apiName ? { ...f, checked } : f
+            f.apiName === apiName
+                ? { ...f, checked, expanded: checked ? f.expanded : false }
+                : f
         );
     }
 
-    handleMoveUp(event) {
-        this._move(event.target.dataset.api, -1);
+    handleToggleExpand(event) {
+        const apiName = event.currentTarget.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, expanded: !f.expanded } : f
+        );
     }
 
-    handleMoveDown(event) {
-        this._move(event.target.dataset.api, 1);
+    // ── Config property handlers ──────────────────────────────────────────────
+
+    handleUsagePeriodChange(event) {
+        const apiName = event.target.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, usagePeriod: event.detail.value } : f
+        );
     }
+
+    handleMetricTypeChange(event) {
+        const apiName = event.target.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, metricType: event.detail.value } : f
+        );
+    }
+
+    handleDefaultValueChange(event) {
+        const apiName = event.target.dataset.api;
+        const val = event.detail.value;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, defaultValue: val !== '' ? val : null } : f
+        );
+    }
+
+    handleReportSourceChange(event) {
+        const apiName = event.target.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, reportSource: event.detail.value } : f
+        );
+    }
+
+    handleReportFieldLabelChange(event) {
+        const apiName = event.target.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, reportFieldLabel: event.detail.value } : f
+        );
+    }
+
+    // ── Move up / down ────────────────────────────────────────────────────────
+
+    handleMoveUp(event)   { this._move(event.target.dataset.api, -1); }
+    handleMoveDown(event) { this._move(event.target.dataset.api,  1); }
 
     _move(apiName, direction) {
-        // Get the section (data entry or calc) the field belongs to, sorted
         const field = this.fieldList.find(f => f.apiName === apiName);
         if (!field) return;
 
@@ -121,47 +187,55 @@ export default class CommissionPlanAdmin extends LightningElement {
             .slice()
             .sort((a, b) => a.sortOrder - b.sortOrder);
 
-        const idx = section.findIndex(f => f.apiName === apiName);
+        const idx     = section.findIndex(f => f.apiName === apiName);
         const swapIdx = idx + direction;
         if (swapIdx < 0 || swapIdx >= section.length) return;
 
-        // Swap sortOrder values between the two fields
         const currentOrder = section[idx].sortOrder;
-        const swapOrder   = section[swapIdx].sortOrder;
+        const swapOrder    = section[swapIdx].sortOrder;
 
         this.fieldList = this.fieldList.map(f => {
-            if (f.apiName === section[idx].apiName)   return { ...f, sortOrder: swapOrder };
+            if (f.apiName === section[idx].apiName)    return { ...f, sortOrder: swapOrder };
             if (f.apiName === section[swapIdx].apiName) return { ...f, sortOrder: currentOrder };
             return f;
         });
     }
 
+    // ── Save ──────────────────────────────────────────────────────────────────
+
     handleSave() {
-        // Collect checked fields from each section in their current sort order,
-        // data entry first then calc fields
         const ordered = [
             ...this.dataEntryFields.filter(f => f.checked),
             ...this.calcFields.filter(f => f.checked)
-        ].map(f => f.apiName);
+        ].map(f => ({
+            fieldApiName    : f.apiName,
+            usagePeriod     : f.usagePeriod     || 'Monthly',
+            metricType      : f.metricType      || '',
+            defaultValue    : f.defaultValue,
+            reportSource    : f.reportSource    || '',
+            reportFieldLabel: f.reportFieldLabel || ''
+        }));
 
         this.isSaving = true;
         saveConfig({
             planDeveloperName: this.selectedPlan,
-            fieldApiNames: ordered
+            fieldConfigJson  : JSON.stringify(ordered)
         })
             .then(() => {
                 this.showToast('Success', 'Configuration saved successfully.', 'success');
+                // Reload to sync sortOrder from server
+                this.loadFields();
             })
-            .catch(error => {
-                this.showToast('Error', this.extractMessage(error), 'error');
-            })
-            .finally(() => {
-                this.isSaving = false;
-            });
+            .catch(error => this.showToast('Error', this.extractMessage(error), 'error'))
+            .finally(() => { this.isSaving = false; });
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     extractMessage(error) {
-        return (error && error.body && error.body.message) ? error.body.message : 'An unexpected error occurred.';
+        if (error?.body?.message) return error.body.message;
+        if (error?.message)       return error.message;
+        return 'An unexpected error occurred.';
     }
 
     showToast(title, message, variant) {

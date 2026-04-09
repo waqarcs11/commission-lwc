@@ -67,6 +67,15 @@ private class CommissionPlanAdminControllerTest {
 
     // ── getConfiguredFields ─────────────────────────────────────────────────────
 
+    // Helper — builds a JSON payload for saveConfig
+    private static String makeConfigJson(List<String> fieldApiNames) {
+        List<String> items = new List<String>();
+        for (String f : fieldApiNames) {
+            items.add('{"fieldApiName":"' + f + '","usagePeriod":"Monthly","metricType":"","defaultValue":null,"reportSource":"","reportFieldLabel":""}');
+        }
+        return '[' + String.join(items, ',') + ']';
+    }
+
     @IsTest
     static void testGetConfiguredFields_returnsFieldsForPlan() {
         insert new List<Commission_Plan_Field_Config__c>{
@@ -76,18 +85,21 @@ private class CommissionPlanAdminControllerTest {
         };
 
         Test.startTest();
-        List<String> result = CommissionPlanAdminController.getConfiguredFields('TestPlan');
+        List<Commission_Plan_Field_Config__c> result =
+            CommissionPlanAdminController.getConfiguredFields('TestPlan');
         Test.stopTest();
 
         System.assertEquals(2, result.size(), 'Should return 2 fields for TestPlan');
-        System.assert(result.contains('Base_Commission__c'), 'Should contain Base_Commission__c');
-        System.assert(result.contains('Funded_Units__c'),    'Should contain Funded_Units__c');
+        Set<String> names = new Set<String>{ result[0].Field_API_Name__c, result[1].Field_API_Name__c };
+        System.assert(names.contains('Base_Commission__c'), 'Should contain Base_Commission__c');
+        System.assert(names.contains('Funded_Units__c'),    'Should contain Funded_Units__c');
     }
 
     @IsTest
     static void testGetConfiguredFields_emptyForUnknownPlan() {
         Test.startTest();
-        List<String> result = CommissionPlanAdminController.getConfiguredFields('NonExistentPlan');
+        List<Commission_Plan_Field_Config__c> result =
+            CommissionPlanAdminController.getConfiguredFields('NonExistentPlan');
         Test.stopTest();
 
         System.assertEquals(0, result.size(), 'Should return empty list for unknown plan');
@@ -97,18 +109,20 @@ private class CommissionPlanAdminControllerTest {
 
     @IsTest
     static void testSaveConfig_insertsNewRecords() {
-        List<String> fields = new List<String>{ 'Base_Commission__c', 'Eligible_Units__c' };
-
         Test.startTest();
-        CommissionPlanAdminController.saveConfig('PlanA', fields);
+        CommissionPlanAdminController.saveConfig(
+            'PlanA',
+            makeConfigJson(new List<String>{ 'Base_Commission__c', 'Eligible_Units__c' })
+        );
         Test.stopTest();
 
         List<Commission_Plan_Field_Config__c> saved = [
-            SELECT Field_API_Name__c
+            SELECT Field_API_Name__c, Usage_Period__c
             FROM Commission_Plan_Field_Config__c
             WHERE Commission_Plan_Developer_Name__c = 'PlanA'
         ];
         System.assertEquals(2, saved.size(), 'Should have inserted 2 config records');
+        System.assertEquals('Monthly', saved[0].Usage_Period__c, 'Default usage period should be Monthly');
     }
 
     @IsTest
@@ -116,7 +130,10 @@ private class CommissionPlanAdminControllerTest {
         insert makeConfig('PlanB', 'Funded_Units__c');
 
         Test.startTest();
-        CommissionPlanAdminController.saveConfig('PlanB', new List<String>{ 'Base_Commission__c' });
+        CommissionPlanAdminController.saveConfig(
+            'PlanB',
+            makeConfigJson(new List<String>{ 'Base_Commission__c' })
+        );
         Test.stopTest();
 
         List<Commission_Plan_Field_Config__c> saved = [
@@ -133,7 +150,7 @@ private class CommissionPlanAdminControllerTest {
         insert makeConfig('PlanC', 'Funded_Units__c');
 
         Test.startTest();
-        CommissionPlanAdminController.saveConfig('PlanC', new List<String>());
+        CommissionPlanAdminController.saveConfig('PlanC', '[]');
         Test.stopTest();
 
         Integer count = [

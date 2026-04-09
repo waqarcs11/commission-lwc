@@ -18,48 +18,132 @@
                 <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
             </template>
 
-            <!-- Field checkboxes (shown once a plan is selected and not loading) -->
             <template if:true={showFields}>
 
                 <!-- Data Entry Fields -->
                 <div class="slds-box slds-m-bottom_medium">
-                    <p class="slds-text-heading_small slds-m-bottom_small">Representative Commission Data Entry Fields</p>
+                    <p class="slds-text-heading_small slds-m-bottom_small">
+                        Representative Commission Data Entry Fields
+                    </p>
                     <template for:each={dataEntryFields} for:item="field">
-                        <div key={field.apiName} class="field-row">
-                            <div class="field-label">
-                                <lightning-input
-                                    type="checkbox"
-                                    label={field.label}
-                                    checked={field.checked}
-                                    data-api={field.apiName}
-                                    onchange={handleFieldToggle}
-                                ></lightning-input>
+                        <div key={field.apiName} class="field-block">
+
+                            <!-- Row: checkbox + move buttons + configure chevron -->
+                            <div class="field-row">
+                                <div class="field-label">
+                                    <lightning-input
+                                        type="checkbox"
+                                        label={field.label}
+                                        checked={field.checked}
+                                        data-api={field.apiName}
+                                        onchange={handleFieldToggle}
+                                    ></lightning-input>
+                                </div>
+                                <div class="field-actions">
+                                    <lightning-button-icon
+                                        icon-name="utility:up"
+                                        variant="border-filled"
+                                        size="x-small"
+                                        alternative-text="Move Up"
+                                        data-api={field.apiName}
+                                        onclick={handleMoveUp}
+                                    ></lightning-button-icon>
+                                    <lightning-button-icon
+                                        icon-name="utility:down"
+                                        variant="border-filled"
+                                        size="x-small"
+                                        alternative-text="Move Down"
+                                        data-api={field.apiName}
+                                        onclick={handleMoveDown}
+                                        class="slds-m-left_x-small"
+                                    ></lightning-button-icon>
+                                    <template if:true={field.checked}>
+                                        <lightning-button-icon
+                                            icon-name="utility:settings"
+                                            variant="border-filled"
+                                            size="x-small"
+                                            alternative-text="Configure"
+                                            data-api={field.apiName}
+                                            onclick={handleToggleExpand}
+                                            class="slds-m-left_x-small"
+                                        ></lightning-button-icon>
+                                    </template>
+                                </div>
                             </div>
-                            <div class="move-buttons">
-                                <lightning-button-icon
-                                    icon-name="utility:up"
-                                    variant="border-filled"
-                                    size="x-small"
-                                    alternative-text="Move Up"
-                                    data-api={field.apiName}
-                                    onclick={handleMoveUp}
-                                ></lightning-button-icon>
-                                <lightning-button-icon
-                                    icon-name="utility:down"
-                                    variant="border-filled"
-                                    size="x-small"
-                                    alternative-text="Move Down"
-                                    data-api={field.apiName}
-                                    onclick={handleMoveDown}
-                                ></lightning-button-icon>
-                            </div>
+
+                            <!-- Expandable config panel -->
+                            <template if:true={field.expanded}>
+                                <div class="config-panel">
+                                    <div class="slds-grid slds-wrap slds-gutters_small">
+
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <lightning-combobox
+                                                label="Usage Period"
+                                                value={field.usagePeriod}
+                                                options={usagePeriodOptions}
+                                                data-api={field.apiName}
+                                                onchange={handleUsagePeriodChange}
+                                            ></lightning-combobox>
+                                        </div>
+
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <lightning-combobox
+                                                label="Metric Type"
+                                                placeholder="-- None --"
+                                                value={field.metricType}
+                                                options={metricTypeOptions}
+                                                data-api={field.apiName}
+                                                onchange={handleMetricTypeChange}
+                                            ></lightning-combobox>
+                                        </div>
+
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <lightning-input
+                                                type="number"
+                                                label="Default Value"
+                                                value={field.defaultValue}
+                                                step="0.0001"
+                                                formatter="decimal"
+                                                data-api={field.apiName}
+                                                onchange={handleDefaultValueChange}
+                                            ></lightning-input>
+                                        </div>
+
+                                        <div class="slds-col slds-size_1-of-2">
+                                            <lightning-input
+                                                type="text"
+                                                label="Report Source (Report ID)"
+                                                value={field.reportSource}
+                                                maxlength="18"
+                                                data-api={field.apiName}
+                                                onchange={handleReportSourceChange}
+                                            ></lightning-input>
+                                        </div>
+
+                                        <div class="slds-col slds-size_1-of-1">
+                                            <lightning-input
+                                                type="text"
+                                                label="Report Field Label"
+                                                value={field.reportFieldLabel}
+                                                maxlength="50"
+                                                data-api={field.apiName}
+                                                onchange={handleReportFieldLabelChange}
+                                            ></lightning-input>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </template>
+
                         </div>
                     </template>
                 </div>
 
                 <!-- Calculation Output Fields -->
                 <div class="slds-box slds-m-bottom_medium">
-                    <p class="slds-text-heading_small slds-m-bottom_small">Representative Commission Calculation Fields</p>
+                    <p class="slds-text-heading_small slds-m-bottom_small">
+                        Representative Commission Calculation Fields
+                    </p>
                     <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
                         Select which calculated results to display on the record detail page.
                     </p>
@@ -74,7 +158,7 @@
                                     onchange={handleFieldToggle}
                                 ></lightning-input>
                             </div>
-                            <div class="move-buttons">
+                            <div class="field-actions">
                                 <lightning-button-icon
                                     icon-name="utility:up"
                                     variant="border-filled"
@@ -90,6 +174,7 @@
                                     alternative-text="Move Down"
                                     data-api={field.apiName}
                                     onclick={handleMoveDown}
+                                    class="slds-m-left_x-small"
                                 ></lightning-button-icon>
                             </div>
                         </div>
@@ -102,9 +187,9 @@
                     onclick={handleSave}
                     disabled={isSaving}
                 ></lightning-button>
+
             </template>
 
-            <!-- Empty state when no fields returned -->
             <template if:true={showEmpty}>
                 <p class="slds-text-color_weak">No accessible fields found on Representative Commission.</p>
             </template>

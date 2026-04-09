@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Metric_Type__c</fullName>
+    <label>Metric Type</label>
+    <type>Picklist</type>
+    <required>false</required>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value><fullName>Month_Start_Target</fullName><label>Month Start Target</label><default>false</default></value>
+            <value><fullName>Month_End_Target</fullName><label>Month End Target</label><default>false</default></value>
+            <value><fullName>Tier_Lookup_Input</fullName><label>Tier Lookup Input</label><default>false</default></value>
+            <value><fullName>Tier_Lookup_Output_Dollar</fullName><label>Tier Lookup Output $</label><default>false</default></value>
+            <value><fullName>Tier_Lookup_Output_Assumption</fullName><label>Tier Lookup Output Assumption</label><default>false</default></value>
+            <value><fullName>User_Input_Assumption</fullName><label>User Input Assumption</label><default>false</default></value>
+            <value><fullName>Calculation_Input_Assumption</fullName><label>Calculation Input Assumption</label><default>false</default></value>
+            <value><fullName>User_Input_Commission_Adjustment</fullName><label>User Input Commission Adjustment</label><default>false</default></value>
+            <value><fullName>Informational_Output_Value</fullName><label>Informational Output Value</label><default>false</default></value>
+            <value><fullName>Commission_Dollar_Output_Value</fullName><label>Commission $ Output Value</label><default>false</default></value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>

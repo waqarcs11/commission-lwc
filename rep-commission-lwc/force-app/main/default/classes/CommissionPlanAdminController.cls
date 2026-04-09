@@ -39,49 +39,61 @@ public with sharing class CommissionPlanAdminController {
         return fields;
     }
 
-    // Returns field API names already configured for the given plan, in display order
+    // Returns full config records for the given plan in display order,
+    // including all extra metadata fields (Usage Period, Metric Type, etc.)
     @AuraEnabled(cacheable=true)
-    public static List<String> getConfiguredFields(String planDeveloperName) {
-        List<String> configured = new List<String>();
-        for (Commission_Plan_Field_Config__c config : [
-            SELECT Field_API_Name__c
+    public static List<Commission_Plan_Field_Config__c> getConfiguredFields(String planDeveloperName) {
+        return [
+            SELECT Field_API_Name__c, Sort_Order__c,
+                   Usage_Period__c, Metric_Type__c, Default_Value__c,
+                   Report_Source__c, Report_Field_Label__c
             FROM Commission_Plan_Field_Config__c
             WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
             ORDER BY Sort_Order__c ASC NULLS LAST
-        ]) {
-            configured.add(config.Field_API_Name__c);
-        }
-        return configured;
+        ];
     }
 
-    // Replaces all config records for the plan with the new field selection
+    // Replaces all config records for the plan with the new field selection + metadata.
+    // fieldConfigJson is a JSON array of FieldConfigItem objects.
     @AuraEnabled
-    public static void saveConfig(String planDeveloperName, List<String> fieldApiNames) {
+    public static void saveConfig(String planDeveloperName, String fieldConfigJson) {
+        List<Object> raw = (List<Object>) JSON.deserializeUntyped(fieldConfigJson);
+
         // Delete existing config records for this plan
         List<Commission_Plan_Field_Config__c> existing = [
-            SELECT Id
-            FROM Commission_Plan_Field_Config__c
+            SELECT Id FROM Commission_Plan_Field_Config__c
             WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
         ];
-        if (!existing.isEmpty()) {
-            delete existing;
+        if (!existing.isEmpty()) delete existing;
+
+        // Insert new config records with all metadata
+        List<Commission_Plan_Field_Config__c> newConfigs = new List<Commission_Plan_Field_Config__c>();
+        for (Integer i = 0; i < raw.size(); i++) {
+            Map<String, Object> item = (Map<String, Object>) raw[i];
+            String apiName = (String) item.get('fieldApiName');
+
+            Commission_Plan_Field_Config__c cfg = new Commission_Plan_Field_Config__c(
+                Name                              = (planDeveloperName + '_' + apiName).abbreviate(80),
+                Commission_Plan_Developer_Name__c = planDeveloperName,
+                Field_API_Name__c                 = apiName,
+                Object_API_Name__c                = 'Representative_Commission__c',
+                Sort_Order__c                     = i + 1,
+                Usage_Period__c                   = (String)  item.get('usagePeriod'),
+                Metric_Type__c                    = (String)  item.get('metricType'),
+                Report_Source__c                  = (String)  item.get('reportSource'),
+                Report_Field_Label__c             = (String)  item.get('reportFieldLabel')
+            );
+
+            // Default_Value__c supports 4 decimal places
+            Object defVal = item.get('defaultValue');
+            if (defVal != null) {
+                cfg.Default_Value__c = Decimal.valueOf(String.valueOf(defVal));
+            }
+
+            newConfigs.add(cfg);
         }
 
-        // Insert new config records for selected fields, preserving the passed-in order
-        List<Commission_Plan_Field_Config__c> newConfigs = new List<Commission_Plan_Field_Config__c>();
-        for (Integer i = 0; i < fieldApiNames.size(); i++) {
-            String apiName = fieldApiNames[i];
-            newConfigs.add(new Commission_Plan_Field_Config__c(
-                Name = (planDeveloperName + '_' + apiName).abbreviate(80),
-                Commission_Plan_Developer_Name__c = planDeveloperName,
-                Field_API_Name__c = apiName,
-                Object_API_Name__c = 'Representative_Commission__c',
-                Sort_Order__c = i + 1
-            ));
-        }
-        if (!newConfigs.isEmpty()) {
-            insert newConfigs;
-        }
+        if (!newConfigs.isEmpty()) insert newConfigs;
     }
 
     // Returns commission tiers for the given plan, ordered by lower bound.
