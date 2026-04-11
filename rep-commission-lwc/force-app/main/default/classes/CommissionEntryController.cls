@@ -34,9 +34,10 @@ public with sharing class CommissionEntryController {
     }
 
     // Creates commission records for all users assigned to the given plan for the given month.
-    // Skips users who already have a record for that month and plan — existing records are never modified.
-    // Pre-populates field default values from configured reports or static defaults for new records only.
-    // Returns a summary of how many were created vs skipped.
+    // For reps with no existing record: creates a new record with all default values.
+    // For reps with an existing record: updates only fields whose Metric_Type__c is
+    //   'Month_Start_Target' or 'Month_End_Target' — all other fields are left untouched.
+    // Returns a summary of how many were created, updated, and skipped.
     @AuraEnabled
     public static RunResult runForMonth(String planDeveloperName, String commissionDate) {
         Date monthDate = Date.valueOf(commissionDate);
@@ -51,73 +52,110 @@ public with sharing class CommissionEntryController {
             AND Commission_Plan__c = :planDeveloperName
         ];
 
-        if (reps.isEmpty()) return new RunResult(0, 0);
+        if (reps.isEmpty()) return new RunResult(0, 0, 0);
 
-        // Find which users already have a record for this month and plan
-        Set<Id> existingUserIds = new Set<Id>();
+        // Find which users already have a record for this month and plan — keep Id for update
+        Map<Id, Id> existingRecordByUserId = new Map<Id, Id>(); // OwnerId -> Record Id
         for (Representative_Commission__c existing : [
-            SELECT OwnerId
+            SELECT Id, OwnerId
             FROM Representative_Commission__c
             WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
             AND Commission_Month__c = :monthDate
             AND OwnerId IN :reps
         ]) {
-            existingUserIds.add(existing.OwnerId);
+            existingRecordByUserId.put(existing.OwnerId, existing.Id);
         }
 
-        // Separate out only the reps who need new records
-        List<User> newReps = new List<User>();
+        // Split reps into new (need insert) and existing (may need partial update)
+        List<User> newReps      = new List<User>();
+        List<User> existingReps = new List<User>();
         for (User rep : reps) {
-            if (!existingUserIds.contains(rep.Id)) {
+            if (existingRecordByUserId.containsKey(rep.Id)) {
+                existingReps.add(rep);
+            } else {
                 newReps.add(rep);
             }
         }
 
-        if (newReps.isEmpty()) return new RunResult(0, existingUserIds.size());
-
-        // Fetch default field values for all new reps in a single bulk report call
-        Map<Id, Map<String, Decimal>> defaultsByUserId = fetchBulkDefaults(newReps, planDeveloperName);
-
-        // Create records and apply defaults
-        List<Representative_Commission__c> toInsert = new List<Representative_Commission__c>();
-        for (User rep : newReps) {
-            Representative_Commission__c rec = new Representative_Commission__c(
-                OwnerId                           = rep.Id,
-                Commission_Month__c               = monthDate,
-                Commission_Month_Year__c          = monthYearLabel,
-                Commission_Plan_Developer_Name__c = planDeveloperName,
-                Name = (planDeveloperName + ' ' + commissionDate.substring(0, 7)).abbreviate(80)
-            );
-
-            Map<String, Decimal> fieldDefaults = defaultsByUserId.get(rep.Id);
-            if (fieldDefaults != null) {
-                for (String fieldApi : fieldDefaults.keySet()) {
-                    rec.put(fieldApi, fieldDefaults.get(fieldApi));
-                }
-            }
-
-            toInsert.add(rec);
-        }
-
-        insert toInsert;
-        return new RunResult(toInsert.size(), existingUserIds.size());
-    }
-
-    // Fetches default field values for a list of reps in one bulk report call.
-    // Returns Map<userId, Map<fieldApiName, value>>.
-    // Each user is seeded with static Default_Value__c first; report values override if present.
-    private static Map<Id, Map<String, Decimal>> fetchBulkDefaults(
-        List<User> reps,
-        String planDeveloperName
-    ) {
-        Map<Id, Map<String, Decimal>> result = new Map<Id, Map<String, Decimal>>();
-
-        List<Commission_Plan_Field_Config__c> configs = [
-            SELECT Field_API_Name__c, Report_Source__c, Report_Field_Label__c, Default_Value__c
+        // Load all field configs for this plan once
+        List<Commission_Plan_Field_Config__c> allConfigs = [
+            SELECT Field_API_Name__c, Report_Source__c, Report_Field_Label__c,
+                   Default_Value__c, Metric_Type__c
             FROM Commission_Plan_Field_Config__c
             WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
             ORDER BY Sort_Order__c ASC NULLS LAST
         ];
+
+        // Target configs — only these are refreshed on existing records
+        List<Commission_Plan_Field_Config__c> targetConfigs = new List<Commission_Plan_Field_Config__c>();
+        for (Commission_Plan_Field_Config__c cfg : allConfigs) {
+            if (cfg.Metric_Type__c == 'Month_Start_Target' || cfg.Metric_Type__c == 'Month_End_Target') {
+                targetConfigs.add(cfg);
+            }
+        }
+
+        Integer created = 0;
+        Integer updated = 0;
+
+        // INSERT path — new reps get a full record with all defaults applied
+        if (!newReps.isEmpty()) {
+            Map<Id, Map<String, Decimal>> defaultsByUserId = fetchBulkDefaults(newReps, allConfigs);
+            List<Representative_Commission__c> toInsert = new List<Representative_Commission__c>();
+            for (User rep : newReps) {
+                Representative_Commission__c rec = new Representative_Commission__c(
+                    OwnerId                           = rep.Id,
+                    Commission_Month__c               = monthDate,
+                    Commission_Month_Year__c          = monthYearLabel,
+                    Commission_Plan_Developer_Name__c = planDeveloperName,
+                    Name = (planDeveloperName + ' ' + commissionDate.substring(0, 7)).abbreviate(80)
+                );
+                Map<String, Decimal> fieldDefaults = defaultsByUserId.get(rep.Id);
+                if (fieldDefaults != null) {
+                    for (String fieldApi : fieldDefaults.keySet()) {
+                        rec.put(fieldApi, fieldDefaults.get(fieldApi));
+                    }
+                }
+                toInsert.add(rec);
+            }
+            insert toInsert;
+            created = toInsert.size();
+        }
+
+        // UPDATE path — existing reps: refresh only Month Start/End Target fields
+        if (!existingReps.isEmpty() && !targetConfigs.isEmpty()) {
+            Map<Id, Map<String, Decimal>> targetDefaultsByUserId = fetchBulkDefaults(existingReps, targetConfigs);
+            List<Representative_Commission__c> toUpdate = new List<Representative_Commission__c>();
+            for (User rep : existingReps) {
+                Map<String, Decimal> fieldDefaults = targetDefaultsByUserId.get(rep.Id);
+                if (fieldDefaults == null || fieldDefaults.isEmpty()) continue;
+                Representative_Commission__c rec = new Representative_Commission__c(
+                    Id = existingRecordByUserId.get(rep.Id)
+                );
+                for (String fieldApi : fieldDefaults.keySet()) {
+                    rec.put(fieldApi, fieldDefaults.get(fieldApi));
+                }
+                toUpdate.add(rec);
+            }
+            if (!toUpdate.isEmpty()) {
+                update toUpdate;
+                updated = toUpdate.size();
+            }
+        }
+
+        // Skipped = existing reps whose target fields had no default values to apply
+        Integer skipped = existingReps.size() - updated;
+        return new RunResult(created, skipped, updated);
+    }
+
+    // Fetches default field values for a list of reps in one bulk report call.
+    // Accepts the configs to apply so callers can pass all configs or a filtered subset.
+    // Returns Map<userId, Map<fieldApiName, value>>.
+    // Each user is seeded with static Default_Value__c first; report values override if present.
+    private static Map<Id, Map<String, Decimal>> fetchBulkDefaults(
+        List<User> reps,
+        List<Commission_Plan_Field_Config__c> configs
+    ) {
+        Map<Id, Map<String, Decimal>> result = new Map<Id, Map<String, Decimal>>();
 
         if (configs.isEmpty()) return result;
 
@@ -456,10 +494,12 @@ public with sharing class CommissionEntryController {
     public class RunResult {
         @AuraEnabled public Integer created { get; set; }
         @AuraEnabled public Integer skipped { get; set; }
+        @AuraEnabled public Integer updated { get; set; }
 
-        public RunResult(Integer created, Integer skipped) {
+        public RunResult(Integer created, Integer skipped, Integer updated) {
             this.created = created;
             this.skipped = skipped;
+            this.updated = updated;
         }
     }
 }

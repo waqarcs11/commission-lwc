@@ -14,6 +14,7 @@ export default class CommissionRun extends LightningElement {
     @track isRunning      = false;
     @track resultCreated  = null;
     @track resultSkipped  = null;
+    @track resultUpdated  = null;
 
     // ── Getters ───────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ export default class CommissionRun extends LightningElement {
         this.selectedPlan  = event.detail.value;
         this.resultCreated = null;
         this.resultSkipped = null;
+        this.resultUpdated = null;
         this.loadReps();
     }
 
@@ -55,12 +57,14 @@ export default class CommissionRun extends LightningElement {
         this.selectedMonth = event.detail.value;
         this.resultCreated = null;
         this.resultSkipped = null;
+        this.resultUpdated = null;
     }
 
     handleRun() {
         this.isRunning = true;
         this.resultCreated = null;
         this.resultSkipped = null;
+        this.resultUpdated = null;
 
         runForMonth({
             planDeveloperName : this.selectedPlan,
@@ -69,11 +73,11 @@ export default class CommissionRun extends LightningElement {
             .then(result => {
                 this.resultCreated = result.created;
                 this.resultSkipped = result.skipped;
-                // Refresh rep list to reflect any newly created records
+                this.resultUpdated = result.updated;
                 this.loadReps();
                 this.showToast(
                     'Run Complete',
-                    `${result.created} record(s) created, ${result.skipped} already existed.`,
+                    `${result.created} created · ${result.updated} updated (targets refreshed) · ${result.skipped} skipped.`,
                     'success'
                 );
             })
@@ -87,6 +91,7 @@ export default class CommissionRun extends LightningElement {
         this.repList        = [];
         this.resultCreated  = null;
         this.resultSkipped  = null;
+        this.resultUpdated  = null;
     }
 
     // ── Private ───────────────────────────────────────────────────────────────

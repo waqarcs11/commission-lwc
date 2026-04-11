@@ -59,7 +59,11 @@
             <template if:true={showResult}>
                 <div class="slds-notify slds-notify_alert slds-theme_success slds-m-bottom_medium" role="alert">
                     <p><strong>Run complete.</strong></p>
-                    <p>{resultCreated} record(s) created &nbsp;·&nbsp; {resultSkipped} already existed (skipped).</p>
+                    <p>
+                        {resultCreated} record(s) created &nbsp;·&nbsp;
+                        {resultUpdated} updated (Month Start/End targets refreshed) &nbsp;·&nbsp;
+                        {resultSkipped} skipped.
+                    </p>
                 </div>
             </template>
 

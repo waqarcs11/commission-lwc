@@ -13,7 +13,8 @@ Build an admin LWC system for commission data entry and bulk commission run mana
 - Commission plans are stored in custom metadata: `RC_Commission_Plan__mdt` (fields: Label, DeveloperName, Payout_Type__c)
 - Plan tiers are stored in custom metadata: `Commission_Plan_Tier__mdt`
 - Admin selects a plan and chooses which fields of `Representative_Commission__c` are visible for data entry
-- Field config is stored in custom object: `Commission_Plan_Field_Config__c` (Field_API_Name__c, Commission_Plan_Developer_Name__c, Sort_Order__c)
+- Field config is stored in custom object: `Commission_Plan_Field_Config__c` (Field_API_Name__c, Commission_Plan_Developer_Name__c, Sort_Order__c, Metric_Type__c)
+- `Metric_Type__c` picklist values include: `Month_Start_Target`, `Month_End_Target`, `Tier_Lookup_Input`, `Tier_Lookup_Output_Dollar`, `Tier_Lookup_Output_Assumption`, `User_Input_Assumption`, `Calculation_Input_Assumption`, `User_Input_Commission_Adjustment`, `Informational_Output_Value`, `Commission_Dollar_Output_Value`
 - Each User has a custom field `Commission_Plan__c` (stores DeveloperName of their assigned plan)
 - Calc fields ending in `_calc__c` on `Representative_Commission__c` are set by a trigger — never entered manually
 
@@ -29,7 +30,10 @@ Single controller serving both LWC components. Key methods:
 - `getFieldsForPlan(planDeveloperName)` — data-entry fields for a plan (excludes _calc__c fields), respects FLS
 - `getExistingRecord(userId, commissionDate, planDeveloperName)` — dynamic SOQL to pre-fill existing record
 - `saveCommission(userId, commissionDate, planDeveloperName, fieldValuesJson, existingRecordId)` — create or update
-- `runForMonth(planDeveloperName, commissionDate)` — bulk create records for all reps on a plan; skips existing; returns RunResult{created, skipped}
+- `runForMonth(planDeveloperName, commissionDate)` — bulk create/update records for all reps on a plan; returns RunResult{created, skipped, updated}
+  - New reps (no existing record): creates record with all field defaults applied
+  - Existing reps: updates only fields where `Metric_Type__c` = `Month_Start_Target` or `Month_End_Target`; all other fields are left untouched
+- `fetchBulkDefaults(reps, configs)` — private; accepts a list of configs (callers pass all configs or a filtered subset); seeds static defaults then overrides with report-driven values
 
 ### LWC: `commissionEntry`
 2-step wizard for individual commission record entry:
@@ -41,8 +45,8 @@ Single controller serving both LWC components. Key methods:
 Bulk commission run tool:
 - Select a plan → shows list of reps assigned to it
 - Select a month → click "Run for Month"
-- Calls `runForMonth()` — creates records for all reps, skips existing
-- Shows result: X created, Y skipped
+- Calls `runForMonth()` — creates records for new reps, updates Month Start/End Target fields on existing records
+- Shows result: X created · Y updated (targets refreshed) · Z skipped
 - Imports: getCommissionPlans, getUsersForPlan, runForMonth
 
 ### Tab: `Commission_Run.tab-meta.xml`
@@ -77,10 +81,13 @@ New tab for the commissionRun component.
 - [x] commissionRun LWC built and wired to Apex
 - [x] runForMonth Apex method written with skip-existing logic
 - [x] getUsersForPlan Apex method written
+- [x] runForMonth updated: existing reps now get Month Start/End Target fields refreshed instead of fully skipped
+- [x] RunResult updated to include `updated` count alongside `created` and `skipped`
+- [x] commissionRun LWC result banner updated to show created / updated / skipped counts
+- [x] Deployed to cardiff-dtpfeb sandbox (waqar@datatoolspro.com.co.dtpfeb) — 2026-04-11
 
 ### Possibly pending
 - [ ] Verify Commission_Run tab is wired to commissionRun component
-- [ ] Deploy and test in org
 - [ ] Test class for CommissionEntryController (runForMonth, getUsersForPlan)
 
 ---
@@ -91,3 +98,11 @@ New tab for the commissionRun component.
 - Resumed project context from file inspection (no prior memory saved)
 - Updated CLAUDE.md to capture full current state of bulk-create branch
 - commissionRun LWC appears complete; controller has all needed methods
+
+### 2026-04-11
+- Updated runForMonth behaviour: existing reps no longer fully skipped
+- Only fields with Metric_Type__c = Month_Start_Target or Month_End_Target are updated on existing records
+- fetchBulkDefaults refactored to accept configs list as parameter (instead of querying internally) so callers can pass a filtered subset
+- RunResult wrapper class updated with new `updated` field
+- commissionRun LWC (html + js) updated to display updated count in result banner
+- Deployed CommissionEntryController + commissionRun LWC to cardiff-dtpfeb
