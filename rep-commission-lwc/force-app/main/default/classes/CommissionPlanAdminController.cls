@@ -46,7 +46,8 @@ public with sharing class CommissionPlanAdminController {
         return [
             SELECT Field_API_Name__c, Sort_Order__c,
                    Usage_Period__c, Metric_Type__c, Default_Value__c,
-                   Report_Source__c, Report_Field_Label__c
+                   Report_Source__c, Report_Field_Label__c,
+                   Calculation_Expression__c
             FROM Commission_Plan_Field_Config__c
             WHERE Commission_Plan_Developer_Name__c = :planDeveloperName
             ORDER BY Sort_Order__c ASC NULLS LAST
@@ -81,7 +82,8 @@ public with sharing class CommissionPlanAdminController {
                 Usage_Period__c                   = (String)  item.get('usagePeriod'),
                 Metric_Type__c                    = (String)  item.get('metricType'),
                 Report_Source__c                  = (String)  item.get('reportSource'),
-                Report_Field_Label__c             = (String)  item.get('reportFieldLabel')
+                Report_Field_Label__c             = (String)  item.get('reportFieldLabel'),
+                Calculation_Expression__c         = (String)  item.get('calculationExpression')
             );
 
             // Default_Value__c supports 4 decimal places

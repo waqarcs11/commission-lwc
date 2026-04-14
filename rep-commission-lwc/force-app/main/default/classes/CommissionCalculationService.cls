@@ -3,11 +3,21 @@
  * Runs in a before insert/before update context.
  * - When a plan changes: clears all data entry fields not configured for the new plan.
  * - Calculates commission components and writes results directly onto the triggering record.
+ *
+ * Calculation pipeline:
+ *   1. legacyCalculate() always runs first as the baseline (existing hardcoded logic).
+ *   2. If any _calc__c field config for this plan has a Calculation_Expression__c value,
+ *      the expression engine runs afterwards, overriding the legacy result for that field.
+ *      Expressions are evaluated in Sort_Order__c sequence so earlier results feed later ones.
+ *   3. If a field config has Metric_Type__c = 'Tier_Lookup_Input' and an expression, the
+ *      tier lookup is re-run using the expression result, updating Tier_*_Calc__c fields
+ *      in the fieldValues map for downstream expressions to reference.
+ *
+ * On day 1 (no expressions configured) behaviour is identical to the legacy path.
  */
 public with sharing class CommissionCalculationService {
 
     // All data entry fields that can be cleared on plan change.
-    // Calculation output fields and system fields are intentionally excluded.
     private static final Set<String> DATA_ENTRY_FIELDS = new Set<String>{
         'Base_Commission__c',
         'Eligible_Units__c',
@@ -33,7 +43,6 @@ public with sharing class CommissionCalculationService {
 
     public static void process(List<Representative_Commission__c> records,
                                Map<Id, Representative_Commission__c> oldMap) {
-        // Load tiers for all plans involved
         Set<String> planNames = new Set<String>();
         Set<Id>     ownerIds  = new Set<Id>();
         for (Representative_Commission__c rec : records) {
@@ -44,10 +53,10 @@ public with sharing class CommissionCalculationService {
         }
         if (planNames.isEmpty()) return;
 
-        Map<String, List<RC_Commission_Tier__mdt>> tiersByPlan = loadTiers(planNames);
-        Map<String, Set<String>> configuredFieldsByPlan = loadConfiguredFields(planNames);
+        Map<String, List<RC_Commission_Tier__mdt>>           tiersByPlan          = loadTiers(planNames);
+        Map<String, Set<String>>                              configuredFieldsByPlan = loadConfiguredFields(planNames);
+        Map<String, List<Commission_Plan_Field_Config__c>>   calcConfigsByPlan    = loadCalcConfigs(planNames);
 
-        // Build owner name map for name auto-generation
         Map<Id, String> ownerNames = new Map<Id, String>();
         for (User u : [SELECT Id, Name FROM User WHERE Id IN :ownerIds]) {
             ownerNames.put(u.Id, u.Name);
@@ -57,48 +66,81 @@ public with sharing class CommissionCalculationService {
             String plan = rec.Commission_Plan_Developer_Name__c;
             if (String.isBlank(plan)) continue;
 
-            // Detect plan change on update
             Boolean planChanged = (oldMap != null)
                 && (oldMap.get(rec.Id).Commission_Plan_Developer_Name__c != plan);
 
-            // Clear data entry fields that are NOT configured for the new plan
             if (planChanged) {
                 Set<String> keepFields = configuredFieldsByPlan.containsKey(plan)
-                    ? configuredFieldsByPlan.get(plan)
-                    : new Set<String>();
-
+                    ? configuredFieldsByPlan.get(plan) : new Set<String>();
                 for (String fieldName : DATA_ENTRY_FIELDS) {
-                    if (!keepFields.contains(fieldName)) {
-                        rec.put(fieldName, null);
-                    }
+                    if (!keepFields.contains(fieldName)) rec.put(fieldName, null);
                 }
-                // Reset calculation outputs and status
                 clearCalculationFields(rec);
                 rec.Status__c = 'Draft';
             }
 
-            // Auto-generate record Name: "Owner Name - Plan Month-Year"
-            String ownerName = ownerNames.containsKey(rec.OwnerId)
-                ? ownerNames.get(rec.OwnerId) : '';
-            String monthYear = String.isNotBlank(rec.Commission_Month_Year__c)
-                ? rec.Commission_Month_Year__c : '';
-            String baseName = (String.isNotBlank(ownerName) ? ownerName + ' - ' : '')
-                + plan
-                + (String.isNotBlank(monthYear) ? ' ' + monthYear : '');
+            String ownerName = ownerNames.containsKey(rec.OwnerId) ? ownerNames.get(rec.OwnerId) : '';
+            String monthYear = String.isNotBlank(rec.Commission_Month_Year__c) ? rec.Commission_Month_Year__c : '';
+            String baseName  = (String.isNotBlank(ownerName) ? ownerName + ' - ' : '')
+                + plan + (String.isNotBlank(monthYear) ? ' ' + monthYear : '');
             rec.Name = baseName.abbreviate(80);
 
-            // Run calculation and write results directly onto the record
-            calculate(rec, tiersByPlan.get(plan));
+            calculate(rec, tiersByPlan.get(plan), calcConfigsByPlan.get(plan));
 
-            // Set status to Calculated unless already Approved
-            if (rec.Status__c != 'Approved') {
-                rec.Status__c = 'Calculated';
+            if (rec.Status__c != 'Approved') rec.Status__c = 'Calculated';
+        }
+    }
+
+    // ── Calculation entry point ───────────────────────────────────────────────
+
+    private static void calculate(
+        Representative_Commission__c rec,
+        List<RC_Commission_Tier__mdt> tiers,
+        List<Commission_Plan_Field_Config__c> calcConfigs
+    ) {
+        // Step 1: always run legacy hardcoded logic as the baseline
+        legacyCalculate(rec, tiers);
+
+        // Step 2: if any expressions are configured, evaluate them in Sort_Order__c sequence,
+        // overriding the legacy value for each field that has an expression
+        if (calcConfigs == null || calcConfigs.isEmpty()) return;
+
+        Boolean hasExpressions = false;
+        for (Commission_Plan_Field_Config__c cfg : calcConfigs) {
+            if (String.isNotBlank(cfg.Calculation_Expression__c)) {
+                hasExpressions = true;
+                break;
+            }
+        }
+        if (!hasExpressions) return;
+
+        // Build a field values map from the post-legacy record state so expressions
+        // can reference both data entry fields and already-computed calc fields
+        Map<String, Decimal> fieldValues = buildFieldValuesMap(rec);
+        Boolean tierRun = false;
+
+        for (Commission_Plan_Field_Config__c cfg : calcConfigs) {
+            if (String.isBlank(cfg.Calculation_Expression__c)) continue;
+
+            Decimal result = CommissionExpressionEvaluator.evaluate(
+                cfg.Calculation_Expression__c, fieldValues
+            );
+            rec.put(cfg.Field_API_Name__c, result);
+            fieldValues.put(cfg.Field_API_Name__c.toLowerCase(), result);
+
+            // After Attainment is calculated, re-run the tier lookup so downstream
+            // expressions can reference the updated Tier_Payout_Calc__c value
+            if (!tierRun && cfg.Field_API_Name__c.toLowerCase() == 'attainment_calc__c') {
+                applyTierLookup(rec, tiers, result, fieldValues);
+                tierRun = true;
             }
         }
     }
 
-    private static void calculate(Representative_Commission__c rec,
-                                   List<RC_Commission_Tier__mdt> tiers) {
+    // ── Legacy hardcoded calculation (baseline, unchanged from original) ──────
+
+    private static void legacyCalculate(Representative_Commission__c rec,
+                                        List<RC_Commission_Tier__mdt> tiers) {
         String plan = rec.Commission_Plan_Developer_Name__c;
 
         // --- Attainment ---
@@ -116,13 +158,13 @@ public with sharing class CommissionCalculationService {
         RC_Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
         Decimal tierPayout = 0;
         if (matchedTier != null) {
-            rec.Tier_Lower_Calc__c = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
-            rec.Tier_Upper_Calc__c = matchedTier.Upper_of_Funded_Units_Against_Eligible__c;
+            rec.Tier_Lower_Calc__c  = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
+            rec.Tier_Upper_Calc__c  = matchedTier.Upper_of_Funded_Units_Against_Eligible__c;
             rec.Tier_Payout_Calc__c = matchedTier.Plan_Tier_Payout__c;
             tierPayout = matchedTier.Plan_Tier_Payout__c != null ? matchedTier.Plan_Tier_Payout__c : 0;
         } else {
-            rec.Tier_Lower_Calc__c = null;
-            rec.Tier_Upper_Calc__c = null;
+            rec.Tier_Lower_Calc__c  = null;
+            rec.Tier_Upper_Calc__c  = null;
             rec.Tier_Payout_Calc__c = 0;
         }
 
@@ -136,6 +178,7 @@ public with sharing class CommissionCalculationService {
         rec.Brokered_Commission_Calc__c = brokeredComm;
 
         // Team Closing Ratio: >75% = $3000, 70-75% = $1000, else $0
+        // Note: threshold logic — candidate for Tier 3 lookup in a future enhancement
         Decimal teamCloseComm = 0;
         if (rec.Team_Closing_Ratio__c != null) {
             if (rec.Team_Closing_Ratio__c > 75) {
@@ -153,7 +196,7 @@ public with sharing class CommissionCalculationService {
         }
         rec.Team_Margin_Commission_Calc__c = teamMarginComm;
 
-        // Deal Margin — BPM/Proposed: percent of Base_Commission; BCRR/ARD/Cardiff: flat dollar tier
+        // Deal Margin — plan-specific
         Decimal dealMarginComm = 0;
         if ((plan == 'Brokered_PM_Comp' || plan == 'Proposed_Comp') && rec.Base_Commission__c != null) {
             dealMarginComm = rec.Base_Commission__c * (tierPayout / 100);
@@ -173,8 +216,6 @@ public with sharing class CommissionCalculationService {
         rec.Termed_Deal_Commission_Calc__c = termedComm;
 
         // Cardiff: Cardiff_Deal_Margin_Amount * (Cardiff_Deal_Margin__c / 100)
-        // Cardiff_Deal_Margin__c is a Percent field — stored as e.g. 15 for 15%, so divide by 100
-        // Tier payout for Cardiff_PM_Comp is handled in Deal_Margin_Commission_Calc__c
         Decimal cardiffComm = 0;
         if (rec.Cardiff_Deal_Margin_Amount__c != null && rec.Cardiff_Deal_Margin__c != null) {
             cardiffComm = rec.Cardiff_Deal_Margin_Amount__c * (rec.Cardiff_Deal_Margin__c / 100);
@@ -194,7 +235,7 @@ public with sharing class CommissionCalculationService {
             if (rec.Proposed_Comp_Margin__c != null) {
                 proposedComm = rec.Proposed_Comp_Margin__c * (tierPayout / 100);
             }
-            if (rec.X50K_Funded__c != null)     proposedComm += rec.X50K_Funded__c;
+            if (rec.X50K_Funded__c     != null) proposedComm += rec.X50K_Funded__c;
             if (rec.X50KPlus_Funded__c != null) proposedComm += rec.X50KPlus_Funded__c;
         }
         rec.Proposed_Comp_Commission_Calc__c = proposedComm;
@@ -206,7 +247,75 @@ public with sharing class CommissionCalculationService {
         rec.Commission_Amount_Calc__c = total;
 
         Decimal adjustment = rec.Commission_Adjustment__c != null ? rec.Commission_Adjustment__c : 0;
-        rec.Final_Commission_Calc__c = total + adjustment;
+        rec.Final_Commission_Calc__c  = total + adjustment;
+    }
+
+    // ── Expression engine helpers ─────────────────────────────────────────────
+
+    // Reads all numeric field values from the record into a lowercase-keyed map.
+    // Used as the input context for expression evaluation.
+    private static Map<String, Decimal> buildFieldValuesMap(Representative_Commission__c rec) {
+        Map<String, Decimal> values = new Map<String, Decimal>();
+        Map<String, Schema.SObjectField> fieldMap =
+            Schema.SObjectType.Representative_Commission__c.fields.getMap();
+        for (String fieldName : fieldMap.keySet()) {
+            Schema.DisplayType dt = fieldMap.get(fieldName).getDescribe().getType();
+            if (dt == Schema.DisplayType.CURRENCY || dt == Schema.DisplayType.DOUBLE
+                || dt == Schema.DisplayType.INTEGER || dt == Schema.DisplayType.PERCENT) {
+                Object val = rec.get(fieldName);
+                values.put(fieldName, val != null ? (Decimal) val : 0);
+            }
+        }
+        return values;
+    }
+
+    // Runs the tier lookup for the given attainment value, writes results onto the record,
+    // and updates the fieldValues map so subsequent expressions can reference tier outputs.
+    private static void applyTierLookup(
+        Representative_Commission__c rec,
+        List<RC_Commission_Tier__mdt> tiers,
+        Decimal attainment,
+        Map<String, Decimal> fieldValues
+    ) {
+        RC_Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
+        if (matchedTier != null) {
+            rec.Tier_Lower_Calc__c  = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
+            rec.Tier_Upper_Calc__c  = matchedTier.Upper_of_Funded_Units_Against_Eligible__c;
+            rec.Tier_Payout_Calc__c = matchedTier.Plan_Tier_Payout__c;
+            fieldValues.put('tier_lower_calc__c',  rec.Tier_Lower_Calc__c  != null ? rec.Tier_Lower_Calc__c  : 0);
+            fieldValues.put('tier_upper_calc__c',  rec.Tier_Upper_Calc__c  != null ? rec.Tier_Upper_Calc__c  : 0);
+            fieldValues.put('tier_payout_calc__c', rec.Tier_Payout_Calc__c != null ? rec.Tier_Payout_Calc__c : 0);
+        } else {
+            rec.Tier_Lower_Calc__c  = null;
+            rec.Tier_Upper_Calc__c  = null;
+            rec.Tier_Payout_Calc__c = 0;
+            fieldValues.put('tier_lower_calc__c',  0);
+            fieldValues.put('tier_upper_calc__c',  0);
+            fieldValues.put('tier_payout_calc__c', 0);
+        }
+    }
+
+    // ── Data loaders ─────────────────────────────────────────────────────────
+
+    // Loads _calc__c field configs (with expressions) for all plans, ordered by Sort_Order__c.
+    private static Map<String, List<Commission_Plan_Field_Config__c>> loadCalcConfigs(
+        Set<String> planNames
+    ) {
+        Map<String, List<Commission_Plan_Field_Config__c>> result =
+            new Map<String, List<Commission_Plan_Field_Config__c>>();
+        for (Commission_Plan_Field_Config__c cfg : [
+            SELECT Commission_Plan_Developer_Name__c, Field_API_Name__c,
+                   Calculation_Expression__c, Metric_Type__c, Sort_Order__c
+            FROM Commission_Plan_Field_Config__c
+            WHERE Commission_Plan_Developer_Name__c IN :planNames
+            ORDER BY Sort_Order__c ASC NULLS LAST
+        ]) {
+            if (!cfg.Field_API_Name__c.toLowerCase().endsWith('_calc__c')) continue;
+            String plan = cfg.Commission_Plan_Developer_Name__c;
+            if (!result.containsKey(plan)) result.put(plan, new List<Commission_Plan_Field_Config__c>());
+            result.get(plan).add(cfg);
+        }
+        return result;
     }
 
     private static void clearCalculationFields(Representative_Commission__c rec) {
@@ -240,7 +349,6 @@ public with sharing class CommissionCalculationService {
 
     private static Map<String, List<RC_Commission_Tier__mdt>> loadTiers(Set<String> planNames) {
         Map<String, List<RC_Commission_Tier__mdt>> result = new Map<String, List<RC_Commission_Tier__mdt>>();
-        // CMT relationship traversal in WHERE is not supported — fetch all tiers and filter in Apex
         for (RC_Commission_Tier__mdt tier : [
             SELECT Commission_Plan__r.DeveloperName,
                    Lowest_of_Funded_Unit_Against_Eligible__c,
@@ -252,9 +360,7 @@ public with sharing class CommissionCalculationService {
         ]) {
             String planKey = tier.Commission_Plan__r.DeveloperName;
             if (!planNames.contains(planKey)) continue;
-            if (!result.containsKey(planKey)) {
-                result.put(planKey, new List<RC_Commission_Tier__mdt>());
-            }
+            if (!result.containsKey(planKey)) result.put(planKey, new List<RC_Commission_Tier__mdt>());
             result.get(planKey).add(tier);
         }
         return result;

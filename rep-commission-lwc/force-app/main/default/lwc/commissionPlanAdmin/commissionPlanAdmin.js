@@ -11,6 +11,56 @@ const USAGE_PERIOD_OPTIONS = [
     { label: 'Annual',    value: 'Annual' }
 ];
 
+// Tier output fields — value set by tier metadata lookup, not by an expression
+const TIER_SYSTEM_FIELDS = new Set([
+    'Tier_Lower_Calc__c',
+    'Tier_Upper_Calc__c',
+    'Tier_Payout_Calc__c'
+]);
+
+// Default expressions matching the existing Apex hardcoded logic.
+// Applied only when a calc field is first added to a plan (no existing config record).
+const DEFAULT_EXPRESSIONS = {
+    'Attainment_Calc__c'                    : '{Funded_Units__c} / {Eligible_Units__c} * 100',
+    'Brokered_Commission_Calc__c'           : '{Brokered_Margin_Amount__c} * ({Brokered_Margin__c} / 100)',
+    'Team_Margin_Commission_Calc__c'        : '{Team_Margin_Amount__c} * ({Team_Margin__c} / 100)',
+    'Termed_Deal_Commission_Calc__c'        : '{Termed_Deal_Margin_Amount__c} * ({Termed_Deal_Margin_Percentage__c} / 100)',
+    'Cardiff_Commission_Calc__c'            : '{Cardiff_Deal_Margin_Amount__c} * ({Cardiff_Deal_Margin__c} / 100)',
+    'Day60_Termed_Commission_Calc__c'       : '{Day60_Plus_Termed_Margin_Amount__c} * ({Day60_Plus_Termed_Margin__c} / 100)',
+    'Team_Closing_Ratio_Commission_Calc__c' : 'IF({Team_Closing_Ratio__c} > 75, 3000, IF({Team_Closing_Ratio__c} >= 70, 1000, 0))',
+    'Commission_Amount_Calc__c'             : '{Brokered_Commission_Calc__c} + {Team_Closing_Ratio_Commission_Calc__c} + {Team_Margin_Commission_Calc__c} + {Deal_Margin_Commission_Calc__c} + {Termed_Deal_Commission_Calc__c} + {Cardiff_Commission_Calc__c} + {Day60_Termed_Commission_Calc__c} + {Proposed_Comp_Commission_Calc__c}',
+    'Final_Commission_Calc__c'              : '{Commission_Amount_Calc__c} + {Commission_Adjustment__c}'
+};
+
+// Plan-specific overrides — take priority over DEFAULT_EXPRESSIONS above
+const PLAN_SPECIFIC_EXPRESSIONS = {
+    'Proposed_Comp' : {
+        'Attainment_Calc__c'                 : '{Approve_to_Fund_Ratio__c}',
+        'Deal_Margin_Commission_Calc__c'     : '{Base_Commission__c} * ({Tier_Payout_Calc__c} / 100)',
+        'Proposed_Comp_Commission_Calc__c'   : '{Proposed_Comp_Margin__c} * ({Tier_Payout_Calc__c} / 100) + {X50K_Funded__c} + {X50KPlus_Funded__c}'
+    },
+    'Brokered_PM_Comp' : {
+        'Deal_Margin_Commission_Calc__c'     : '{Base_Commission__c} * ({Tier_Payout_Calc__c} / 100)'
+    },
+    'Brokered_CRR_Comp' : {
+        'Deal_Margin_Commission_Calc__c'     : '{Tier_Payout_Calc__c}'
+    },
+    'Assistant_Renewals_Director_Comp' : {
+        'Deal_Margin_Commission_Calc__c'     : '{Tier_Payout_Calc__c}'
+    },
+    'Cardiff_PM_Comp' : {
+        'Deal_Margin_Commission_Calc__c'     : '{Tier_Payout_Calc__c}'
+    },
+    'CRF_CRR_Comp' : {
+        'Deal_Margin_Commission_Calc__c'     : '{Tier_Payout_Calc__c}'
+    }
+};
+
+function getDefaultExpression(apiName, planDeveloperName) {
+    const planOverrides = PLAN_SPECIFIC_EXPRESSIONS[planDeveloperName] || {};
+    return planOverrides[apiName] || DEFAULT_EXPRESSIONS[apiName] || '';
+}
+
 const METRIC_TYPE_OPTIONS = [
     { label: '-- None --',                        value: '' },
     { label: 'Month Start Target',                value: 'Month_Start_Target' },
@@ -94,21 +144,30 @@ export default class CommissionPlanAdmin extends LightningElement {
                 let uncheckedOrder = configured.length + 1;
 
                 this.fieldList = available.map(f => {
-                    const existing = configMap.get(f.apiName);
-                    const isChecked = !!existing;
+                    const existing   = configMap.get(f.apiName);
+                    const isChecked  = !!existing;
+                    // Tier system fields show in the list but have no expression — value set by tier lookup
+                    const isExpressionField = f.isCalcField && !TIER_SYSTEM_FIELDS.has(f.apiName);
+                    // For expression fields, fall back to the Apex-equivalent default when no expression is saved yet
+                    const defaultExpr = isExpressionField
+                        ? getDefaultExpression(f.apiName, this.selectedPlan)
+                        : '';
                     return {
-                        apiName         : f.apiName,
-                        label           : f.label,
-                        isCalcField     : f.isCalcField,
-                        checked         : isChecked,
-                        expanded        : false,
-                        sortOrder       : isChecked ? existing.Sort_Order__c : uncheckedOrder++,
+                        apiName               : f.apiName,
+                        label                 : f.label,
+                        displayLabel          : f.label + ' (' + f.apiName + ')',
+                        isCalcField           : f.isCalcField,
+                        isExpressionField     : isExpressionField,
+                        checked               : isChecked,
+                        expanded              : false,
+                        sortOrder             : isChecked ? existing.Sort_Order__c : uncheckedOrder++,
                         // Extra config properties
-                        usagePeriod     : existing?.Usage_Period__c     || 'Monthly',
-                        metricType      : existing?.Metric_Type__c      || '',
-                        defaultValue    : existing?.Default_Value__c    ?? null,
-                        reportSource    : existing?.Report_Source__c    || '',
-                        reportFieldLabel: existing?.Report_Field_Label__c || ''
+                        usagePeriod           : existing?.Usage_Period__c          || 'Monthly',
+                        metricType            : existing?.Metric_Type__c           || '',
+                        defaultValue          : existing?.Default_Value__c         ?? null,
+                        reportSource          : existing?.Report_Source__c         || '',
+                        reportFieldLabel      : existing?.Report_Field_Label__c    || '',
+                        calculationExpression : existing?.Calculation_Expression__c || defaultExpr
                     };
                 });
             })
@@ -173,6 +232,13 @@ export default class CommissionPlanAdmin extends LightningElement {
         );
     }
 
+    handleCalculationExpressionChange(event) {
+        const apiName = event.target.dataset.api;
+        this.fieldList = this.fieldList.map(f =>
+            f.apiName === apiName ? { ...f, calculationExpression: event.detail.value } : f
+        );
+    }
+
     // ── Move up / down ────────────────────────────────────────────────────────
 
     handleMoveUp(event)   { this._move(event.target.dataset.api, -1); }
@@ -208,12 +274,13 @@ export default class CommissionPlanAdmin extends LightningElement {
             ...this.dataEntryFields.filter(f => f.checked),
             ...this.calcFields.filter(f => f.checked)
         ].map(f => ({
-            fieldApiName    : f.apiName,
-            usagePeriod     : f.usagePeriod     || 'Monthly',
-            metricType      : f.metricType      || '',
-            defaultValue    : f.defaultValue,
-            reportSource    : f.reportSource    || '',
-            reportFieldLabel: f.reportFieldLabel || ''
+            fieldApiName          : f.apiName,
+            usagePeriod           : f.isCalcField ? 'Monthly'              : (f.usagePeriod      || 'Monthly'),
+            metricType            : f.isCalcField ? ''                     : (f.metricType       || ''),
+            defaultValue          : f.isCalcField ? null                   : f.defaultValue,
+            reportSource          : f.isCalcField ? ''                     : (f.reportSource     || ''),
+            reportFieldLabel      : f.isCalcField ? ''                     : (f.reportFieldLabel || ''),
+            calculationExpression : f.isCalcField ? (f.calculationExpression || '') : ''
         }));
 
         this.isSaving = true;

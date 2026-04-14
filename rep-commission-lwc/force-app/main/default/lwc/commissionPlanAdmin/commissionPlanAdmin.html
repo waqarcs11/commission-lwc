@@ -33,7 +33,7 @@
                                 <div class="field-label">
                                     <lightning-input
                                         type="checkbox"
-                                        label={field.label}
+                                        label={field.displayLabel}
                                         checked={field.checked}
                                         data-api={field.apiName}
                                         onchange={handleFieldToggle}
@@ -145,38 +145,75 @@
                         Representative Commission Calculation Fields
                     </p>
                     <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
-                        Select which calculated results to display on the record detail page.
+                        Select which calculated results to display on the record detail page. Use the settings icon to configure Metric Type and Calculation Expression.
                     </p>
                     <template for:each={calcFields} for:item="field">
-                        <div key={field.apiName} class="field-row">
-                            <div class="field-label">
-                                <lightning-input
-                                    type="checkbox"
-                                    label={field.label}
-                                    checked={field.checked}
-                                    data-api={field.apiName}
-                                    onchange={handleFieldToggle}
-                                ></lightning-input>
+                        <div key={field.apiName} class="field-block">
+
+                            <!-- Row: checkbox + move buttons + configure chevron -->
+                            <div class="field-row">
+                                <div class="field-label">
+                                    <lightning-input
+                                        type="checkbox"
+                                        label={field.displayLabel}
+                                        checked={field.checked}
+                                        data-api={field.apiName}
+                                        onchange={handleFieldToggle}
+                                    ></lightning-input>
+                                </div>
+                                <div class="field-actions">
+                                    <lightning-button-icon
+                                        icon-name="utility:up"
+                                        variant="border-filled"
+                                        size="x-small"
+                                        alternative-text="Move Up"
+                                        data-api={field.apiName}
+                                        onclick={handleMoveUp}
+                                    ></lightning-button-icon>
+                                    <lightning-button-icon
+                                        icon-name="utility:down"
+                                        variant="border-filled"
+                                        size="x-small"
+                                        alternative-text="Move Down"
+                                        data-api={field.apiName}
+                                        onclick={handleMoveDown}
+                                        class="slds-m-left_x-small"
+                                    ></lightning-button-icon>
+                                    <template if:true={field.checked}>
+                                        <lightning-button-icon
+                                            icon-name="utility:settings"
+                                            variant="border-filled"
+                                            size="x-small"
+                                            alternative-text="Configure"
+                                            data-api={field.apiName}
+                                            onclick={handleToggleExpand}
+                                            class="slds-m-left_x-small"
+                                        ></lightning-button-icon>
+                                    </template>
+                                </div>
                             </div>
-                            <div class="field-actions">
-                                <lightning-button-icon
-                                    icon-name="utility:up"
-                                    variant="border-filled"
-                                    size="x-small"
-                                    alternative-text="Move Up"
-                                    data-api={field.apiName}
-                                    onclick={handleMoveUp}
-                                ></lightning-button-icon>
-                                <lightning-button-icon
-                                    icon-name="utility:down"
-                                    variant="border-filled"
-                                    size="x-small"
-                                    alternative-text="Move Down"
-                                    data-api={field.apiName}
-                                    onclick={handleMoveDown}
-                                    class="slds-m-left_x-small"
-                                ></lightning-button-icon>
-                            </div>
+
+                            <!-- Expandable config panel for calc fields -->
+                            <template if:true={field.expanded}>
+                                <div class="config-panel">
+                                    <template if:true={field.isExpressionField}>
+                                        <lightning-textarea
+                                            label="Calculation Expression"
+                                            value={field.calculationExpression}
+                                            placeholder="e.g. {Field_A__c} * ({Field_B__c} / 100)"
+                                            max-length="1000"
+                                            data-api={field.apiName}
+                                            onchange={handleCalculationExpressionChange}
+                                        ></lightning-textarea>
+                                    </template>
+                                    <template if:false={field.isExpressionField}>
+                                        <p class="slds-text-body_small slds-text-color_weak slds-p-around_x-small">
+                                            Value is set automatically by the tier metadata lookup — no expression needed.
+                                        </p>
+                                    </template>
+                                </div>
+                            </template>
+
                         </div>
                     </template>
                 </div>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Calculation_Expression__c</fullName>
+    <label>Calculation Expression</label>
+    <type>LongTextArea</type>
+    <length>1000</length>
+    <visibleLines>3</visibleLines>
+    <required>false</required>
+    <description>Arithmetic expression for _calc__c fields only. Reference other fields with {Field_API_Name__c} syntax. Supports +, -, *, /, and parentheses. Example: {Brokered_Margin_Amount__c} * ({Brokered_Margin__c} / 100). Leave blank to use legacy hardcoded logic.</description>
+</CustomField>

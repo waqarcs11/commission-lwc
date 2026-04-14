@@ -7,7 +7,7 @@
 
     <template lwc:else>
         <!-- Back to List button -->
-        <div class="slds-p-horizontal_medium slds-p-top_small slds-p-bottom_x-small">
+        <div class="page-actions">
             <lightning-button
                 label="Back to List"
                 icon-name="utility:back"
@@ -24,89 +24,107 @@
 
             <lightning-messages></lightning-messages>
 
-            <!-- Plan & Status (always visible) -->
-            <div class="section-header">Plan &amp; Status</div>
-            <div class="slds-grid slds-wrap slds-p-horizontal_medium slds-p-bottom_small">
-                <div class="slds-col slds-size_1-of-2">
-                    <lightning-output-field field-name="Commission_Plan_Developer_Name__c"></lightning-output-field>
+            <!-- Plan & Status -->
+            <div class="record-card">
+                <div class="card-header card-header_plan">
+                    <lightning-icon icon-name="standard:planning_poker" size="x-small" class="card-icon"></lightning-icon>
+                    <span>Plan &amp; Status</span>
                 </div>
-                <div class="slds-col slds-size_1-of-2">
-                    <lightning-output-field field-name="Status__c"></lightning-output-field>
-                </div>
-                <div class="slds-col slds-size_1-of-2">
-                    <lightning-output-field field-name="Commission_Month__c"></lightning-output-field>
-                </div>
-                <div class="slds-col slds-size_1-of-2">
-                    <lightning-output-field field-name="Commission_Month_Year__c"></lightning-output-field>
-                </div>
-                <div class="slds-col slds-size_1-of-2">
-                    <lightning-input-field field-name="OwnerId"></lightning-input-field>
-                </div>
-            </div>
-
-            <!-- Data Entry — only input fields configured for this plan -->
-            <div class="section-header">Data Entry</div>
-            <div class="slds-grid slds-wrap slds-p-horizontal_medium slds-p-bottom_small">
-                <template lwc:if={hasConfiguredFields}>
-                    <template for:each={configuredInputFields} for:item="fieldConfig">
-                        <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2">
-                            <lightning-input-field field-name={fieldConfig.Field_API_Name__c}></lightning-input-field>
-                        </div>
-                    </template>
-                </template>
-                <template lwc:if={noFieldsConfigured}>
-                    <div class="slds-col slds-size_1-of-1 slds-p-around_small">
-                        <p class="slds-text-color_weak">
-                            No fields configured for this plan.
-                            Use Commission Plan Field Config to set them up.
-                        </p>
+                <div class="card-body slds-grid slds-wrap">
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-output-field field-name="Commission_Plan_Developer_Name__c"></lightning-output-field>
                     </div>
-                </template>
-            </div>
-
-            <div class="slds-p-horizontal_medium slds-p-bottom_medium slds-m-top_small">
-                <lightning-button variant="brand" type="submit" label="Save Changes"></lightning-button>
-            </div>
-
-            <!-- Calculation Results — read-only, shown below Save so values are visible after saving -->
-            <template lwc:if={hasCalcFields}>
-                <div class="section-header section-header_calc">
-                    Calculation Results
-                    <span class="calc-badge">Calculated automatically &middot; Read Only</span>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-output-field field-name="Status__c"></lightning-output-field>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-output-field field-name="Commission_Month_Year__c"></lightning-output-field>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-output-field field-name="Commission_Month__c"></lightning-output-field>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3">
+                        <lightning-input-field field-name="OwnerId"></lightning-input-field>
+                    </div>
                 </div>
-                <div class="calc-section slds-grid slds-wrap slds-p-horizontal_medium slds-p-bottom_small">
-                    <template for:each={configuredCalcFields} for:item="fieldConfig">
-                        <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2">
-                            <lightning-output-field field-name={fieldConfig.Field_API_Name__c}></lightning-output-field>
+            </div>
+
+            <!-- Data Entry -->
+            <div class="record-card">
+                <div class="card-header card-header_entry">
+                    <lightning-icon icon-name="utility:edit" size="x-small" class="card-icon"></lightning-icon>
+                    <span>Data Entry</span>
+                </div>
+                <div class="card-body slds-grid slds-wrap">
+                    <template lwc:if={hasConfiguredFields}>
+                        <template for:each={configuredInputFields} for:item="fieldConfig">
+                            <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2">
+                                <lightning-input-field field-name={fieldConfig.Field_API_Name__c}></lightning-input-field>
+                            </div>
+                        </template>
+                    </template>
+                    <template lwc:if={noFieldsConfigured}>
+                        <div class="slds-col slds-size_1-of-1 slds-p-around_small">
+                            <p class="slds-text-color_weak">
+                                No fields configured for this plan.
+                                Use Commission Plan Field Config to set them up.
+                            </p>
                         </div>
                     </template>
+                </div>
+
+                <div class="card-footer">
+                    <lightning-button variant="brand" type="submit" label="Save Changes"></lightning-button>
+                </div>
+            </div>
+
+            <!-- Calculation Results -->
+            <template lwc:if={hasCalcFields}>
+                <div class="record-card record-card_calc">
+                    <div class="card-header card-header_calc">
+                        <lightning-icon icon-name="utility:formula" size="x-small" class="card-icon"></lightning-icon>
+                        <span>Calculation Results</span>
+                        <span class="calc-badge">Calculated automatically &middot; Read Only</span>
+                    </div>
+                    <div class="card-body slds-grid slds-wrap">
+                        <template for:each={configuredCalcFields} for:item="fieldConfig">
+                            <div key={fieldConfig.Field_API_Name__c} class="slds-col slds-size_1-of-2 calc-field">
+                                <lightning-output-field field-name={fieldConfig.Field_API_Name__c}></lightning-output-field>
+                            </div>
+                        </template>
+                    </div>
                 </div>
             </template>
 
-            <!-- Commission Tiers for the selected plan -->
+            <!-- Commission Tiers -->
             <template lwc:if={hasTiers}>
-                <div class="section-header section-header_tiers">Commission Tiers</div>
-                <div class="slds-p-horizontal_medium slds-p-bottom_medium">
-                    <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped tier-table">
-                        <thead>
-                            <tr class="slds-line-height_reset">
-                                <th scope="col"><div class="slds-truncate">Lower (%)</div></th>
-                                <th scope="col"><div class="slds-truncate">Upper (%)</div></th>
-                                <th scope="col"><div class="slds-truncate">Payout</div></th>
-                                <th scope="col"><div class="slds-truncate">Payout Type</div></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template for:each={tiers} for:item="tier">
-                                <tr key={tier.lower}>
-                                    <td>{tier.lower}</td>
-                                    <td>{tier.upper}</td>
-                                    <td>{tier.payout}</td>
-                                    <td>{tier.payoutType}</td>
+                <div class="record-card record-card_tiers">
+                    <div class="card-header card-header_tiers">
+                        <lightning-icon icon-name="utility:level_up" size="x-small" class="card-icon"></lightning-icon>
+                        <span>Commission Tiers</span>
+                    </div>
+                    <div class="card-body">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered tier-table">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th scope="col"><div class="slds-truncate">Lower (%)</div></th>
+                                    <th scope="col"><div class="slds-truncate">Upper (%)</div></th>
+                                    <th scope="col"><div class="slds-truncate">Payout</div></th>
+                                    <th scope="col"><div class="slds-truncate">Payout Type</div></th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <template for:each={tiers} for:item="tier">
+                                    <tr key={tier.lower}>
+                                        <td>{tier.lower}</td>
+                                        <td>{tier.upper}</td>
+                                        <td>{tier.payout}</td>
+                                        <td>{tier.payoutType}</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </template>
 
