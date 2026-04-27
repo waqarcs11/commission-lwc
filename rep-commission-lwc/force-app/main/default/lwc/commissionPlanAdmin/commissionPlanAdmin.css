@@ -37,3 +37,103 @@
     margin: 0 0.5rem 0.5rem 0.5rem;
     border-radius: 0 4px 4px 0;
 }
+
+/* Report Sources Widget */
+.report-sources-widget {
+    border-left: 3px solid #0176d3;
+}
+
+.report-sources-table thead tr {
+    background-color: #f3f6fb;
+}
+
+.report-sources-table thead th {
+    font-weight: 700;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    color: #444;
+}
+
+.report-sources-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.report-sources-table a {
+    color: #0176d3;
+    text-decoration: none;
+}
+
+.report-sources-table a:hover {
+    text-decoration: underline;
+}
+
+/* Button row */
+.button-row {
+    display: flex;
+    align-items: center;
+}
+
+/* ── Print / Export PDF ─────────────────────────────────────────────────── */
+@media print {
+
+    /* Hide all interactive controls */
+    lightning-combobox,
+    lightning-button,
+    lightning-button-icon,
+    lightning-spinner,
+    .field-actions,
+    .button-row {
+        display: none !important;
+    }
+
+    /* Hide config panels — they're noisy when printed */
+    .config-panel {
+        display: none !important;
+    }
+
+    /* Remove box shadows and card chrome */
+    lightning-card {
+        box-shadow: none !important;
+        border: none !important;
+    }
+
+    /* Print header */
+    .report-sources-widget {
+        border-left: 3px solid #000;
+        page-break-inside: avoid;
+    }
+
+    .report-sources-table a {
+        color: #000;
+        text-decoration: none;
+    }
+
+    /* Show report URL in parentheses after the link text */
+    .report-sources-table a::after {
+        content: " (" attr(href) ")";
+        font-size: 0.75rem;
+        color: #555;
+    }
+
+    /* Keep field rows readable */
+    .field-row {
+        padding: 0.25rem 0.5rem;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .field-row:hover {
+        background-color: transparent;
+    }
+
+    /* Section headings */
+    .slds-text-heading_small {
+        font-weight: 700;
+        font-size: 1rem;
+        margin-bottom: 0.5rem;
+    }
+
+    /* Prevent sections from splitting across pages */
+    .slds-box {
+        page-break-inside: avoid;
+    }
+}

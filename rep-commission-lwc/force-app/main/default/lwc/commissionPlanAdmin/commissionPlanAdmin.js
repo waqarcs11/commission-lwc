@@ -1,9 +1,10 @@
 import { LightningElement, track } from 'lwc';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import getPlans           from '@salesforce/apex/CommissionPlanAdminController.getPlans';
-import getAvailableFields from '@salesforce/apex/CommissionPlanAdminController.getAvailableFields';
+import getPlans            from '@salesforce/apex/CommissionPlanAdminController.getPlans';
+import getAvailableFields  from '@salesforce/apex/CommissionPlanAdminController.getAvailableFields';
 import getConfiguredFields from '@salesforce/apex/CommissionPlanAdminController.getConfiguredFields';
-import saveConfig         from '@salesforce/apex/CommissionPlanAdminController.saveConfig';
+import saveConfig          from '@salesforce/apex/CommissionPlanAdminController.saveConfig';
+import getReportNames      from '@salesforce/apex/CommissionPlanAdminController.getReportNames';
 
 const USAGE_PERIOD_OPTIONS = [
     { label: 'Monthly',   value: 'Monthly' },
@@ -79,6 +80,7 @@ export default class CommissionPlanAdmin extends LightningElement {
 
     @track planOptions      = [];
     @track fieldList        = [];
+    @track reportNameMap    = {};
     @track selectedPlan     = '';
     @track isLoading        = false;
     @track isSaving         = false;
@@ -94,6 +96,23 @@ export default class CommissionPlanAdmin extends LightningElement {
 
     get showEmpty() {
         return this.selectedPlan && !this.isLoading && this.fieldList.length === 0;
+    }
+
+    get reportSourceFields() {
+        return this.fieldList
+            .filter(f => f.reportSource)
+            .map(f => ({
+                apiName      : f.apiName,
+                fieldLabel   : f.label,
+                reportId     : f.reportSource,
+                reportName   : this.reportNameMap[f.reportSource] || f.reportSource,
+                measureLabel : f.reportFieldLabel || '—',
+                reportUrl    : '/lightning/r/Report/' + f.reportSource + '/view'
+            }));
+    }
+
+    get hasReportSources() {
+        return this.reportSourceFields.length > 0;
     }
 
     get dataEntryFields() {
@@ -130,6 +149,7 @@ export default class CommissionPlanAdmin extends LightningElement {
     loadFields() {
         this.isLoading = true;
         this.fieldList = [];
+        this.reportNameMap = {};
 
         Promise.all([
             getAvailableFields(),
@@ -170,6 +190,22 @@ export default class CommissionPlanAdmin extends LightningElement {
                         calculationExpression : existing?.Calculation_Expression__c || defaultExpr
                     };
                 });
+
+                // Fetch report names for any fields that have a report source configured
+                const reportIds = [...new Set(
+                    this.fieldList.map(f => f.reportSource).filter(id => !!id)
+                )];
+                if (reportIds.length > 0) {
+                    return getReportNames({ reportIds });
+                }
+                return [];
+            })
+            .then(reportInfoList => {
+                if (reportInfoList && reportInfoList.length > 0) {
+                    const nameMap = {};
+                    reportInfoList.forEach(r => { nameMap[r.reportId] = r.reportName; });
+                    this.reportNameMap = nameMap;
+                }
             })
             .catch(error => this.showToast('Error', this.extractMessage(error), 'error'))
             .finally(() => { this.isLoading = false; });
@@ -295,6 +331,12 @@ export default class CommissionPlanAdmin extends LightningElement {
             })
             .catch(error => this.showToast('Error', this.extractMessage(error), 'error'))
             .finally(() => { this.isSaving = false; });
+    }
+
+    // ── Print ─────────────────────────────────────────────────────────────────
+
+    handlePrint() {
+        window.print();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -98,6 +98,29 @@ public with sharing class CommissionPlanAdminController {
         if (!newConfigs.isEmpty()) insert newConfigs;
     }
 
+    // Returns report names for a list of report IDs.
+    // Used by the Report Sources Reference widget to display human-readable names.
+    @AuraEnabled(cacheable=true)
+    public static List<ReportInfo> getReportNames(List<String> reportIds) {
+        List<ReportInfo> results = new List<ReportInfo>();
+        if (reportIds == null || reportIds.isEmpty()) return results;
+
+        for (Report r : [SELECT Id, Name FROM Report WHERE Id IN :reportIds]) {
+            results.add(new ReportInfo(String.valueOf(r.Id), r.Name));
+        }
+        return results;
+    }
+
+    public class ReportInfo {
+        @AuraEnabled public String reportId   { get; set; }
+        @AuraEnabled public String reportName { get; set; }
+
+        public ReportInfo(String reportId, String reportName) {
+            this.reportId   = reportId;
+            this.reportName = reportName;
+        }
+    }
+
     // Returns commission tiers for the given plan, ordered by lower bound.
     // Fetches all CMT tiers and filters in Apex because MetadataRelationship
     // fields cannot be used in SOQL WHERE clauses.

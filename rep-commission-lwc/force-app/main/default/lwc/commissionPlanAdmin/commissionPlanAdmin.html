@@ -20,6 +20,38 @@
 
             <template if:true={showFields}>
 
+                <!-- Report Sources Reference Widget -->
+                <template if:true={hasReportSources}>
+                    <div class="slds-box slds-m-bottom_medium report-sources-widget">
+                        <p class="slds-text-heading_small slds-m-bottom_x-small">Report Sources Reference</p>
+                        <p class="slds-text-body_small slds-text-color_weak slds-m-bottom_small">
+                            The fields below pull their default values from Salesforce reports. Click a report name to open it.
+                        </p>
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_col-bordered report-sources-table">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th scope="col"><div class="slds-truncate">Field</div></th>
+                                    <th scope="col"><div class="slds-truncate">Source Report</div></th>
+                                    <th scope="col"><div class="slds-truncate">Measure / Column</div></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template for:each={reportSourceFields} for:item="row">
+                                    <tr key={row.apiName}>
+                                        <td>{row.fieldLabel}</td>
+                                        <td>
+                                            <a href={row.reportUrl} target="_blank" rel="noopener noreferrer">
+                                                {row.reportName}
+                                            </a>
+                                        </td>
+                                        <td>{row.measureLabel}</td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                </template>
+
                 <!-- Data Entry Fields -->
                 <div class="slds-box slds-m-bottom_medium">
                     <p class="slds-text-heading_small slds-m-bottom_small">
@@ -218,12 +250,21 @@
                     </template>
                 </div>
 
-                <lightning-button
-                    variant="brand"
-                    label="Save Configuration"
-                    onclick={handleSave}
-                    disabled={isSaving}
-                ></lightning-button>
+                <div class="button-row">
+                    <lightning-button
+                        variant="brand"
+                        label="Save Configuration"
+                        onclick={handleSave}
+                        disabled={isSaving}
+                    ></lightning-button>
+                    <lightning-button
+                        variant="neutral"
+                        label="Print / Export PDF"
+                        icon-name="utility:print"
+                        onclick={handlePrint}
+                        class="slds-m-left_small"
+                    ></lightning-button>
+                </div>
 
             </template>
 

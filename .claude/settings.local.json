@@ -28,7 +28,8 @@
       "Bash(python -c ':*)",
       "Bash(mkdir -p E:/xampp/htdocs/commission_LWC/tmp)",
       "Bash(ls:*)",
-      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" project:*)"
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" project:*)",
+      "Bash(xargs wc:*)"
     ]
   }
 }
