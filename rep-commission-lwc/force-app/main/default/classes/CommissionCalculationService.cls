@@ -53,7 +53,7 @@ public with sharing class CommissionCalculationService {
         }
         if (planNames.isEmpty()) return;
 
-        Map<String, List<RC_Commission_Tier__mdt>>           tiersByPlan          = loadTiers(planNames);
+        Map<String, List<Commission_Tier__c>>              tiersByPlan          = loadTiers(planNames);
         Map<String, Set<String>>                              configuredFieldsByPlan = loadConfiguredFields(planNames);
         Map<String, List<Commission_Plan_Field_Config__c>>   calcConfigsByPlan    = loadCalcConfigs(planNames);
 
@@ -95,7 +95,7 @@ public with sharing class CommissionCalculationService {
 
     private static void calculate(
         Representative_Commission__c rec,
-        List<RC_Commission_Tier__mdt> tiers,
+        List<Commission_Tier__c> tiers,
         List<Commission_Plan_Field_Config__c> calcConfigs
     ) {
         // Step 1: always run legacy hardcoded logic as the baseline
@@ -140,7 +140,7 @@ public with sharing class CommissionCalculationService {
     // ── Legacy hardcoded calculation (baseline, unchanged from original) ──────
 
     private static void legacyCalculate(Representative_Commission__c rec,
-                                        List<RC_Commission_Tier__mdt> tiers) {
+                                        List<Commission_Tier__c> tiers) {
         String plan = rec.Commission_Plan_Developer_Name__c;
 
         // --- Attainment ---
@@ -155,7 +155,7 @@ public with sharing class CommissionCalculationService {
         rec.Attainment_Calc__c = attainment;
 
         // --- Tier match ---
-        RC_Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
+        Commission_Tier__c matchedTier = findTier(tiers, attainment);
         Decimal tierPayout = 0;
         if (matchedTier != null) {
             rec.Tier_Lower_Calc__c  = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
@@ -273,11 +273,11 @@ public with sharing class CommissionCalculationService {
     // and updates the fieldValues map so subsequent expressions can reference tier outputs.
     private static void applyTierLookup(
         Representative_Commission__c rec,
-        List<RC_Commission_Tier__mdt> tiers,
+        List<Commission_Tier__c> tiers,
         Decimal attainment,
         Map<String, Decimal> fieldValues
     ) {
-        RC_Commission_Tier__mdt matchedTier = findTier(tiers, attainment);
+        Commission_Tier__c matchedTier = findTier(tiers, attainment);
         if (matchedTier != null) {
             rec.Tier_Lower_Calc__c  = matchedTier.Lowest_of_Funded_Unit_Against_Eligible__c;
             rec.Tier_Upper_Calc__c  = matchedTier.Upper_of_Funded_Units_Against_Eligible__c;
@@ -335,9 +335,9 @@ public with sharing class CommissionCalculationService {
         rec.Final_Commission_Calc__c              = null;
     }
 
-    private static RC_Commission_Tier__mdt findTier(List<RC_Commission_Tier__mdt> tiers, Decimal attainment) {
+    private static Commission_Tier__c findTier(List<Commission_Tier__c> tiers, Decimal attainment) {
         if (tiers == null) return null;
-        for (RC_Commission_Tier__mdt tier : tiers) {
+        for (Commission_Tier__c tier : tiers) {
             Decimal lower = tier.Lowest_of_Funded_Unit_Against_Eligible__c != null
                 ? tier.Lowest_of_Funded_Unit_Against_Eligible__c : 0;
             Decimal upper = tier.Upper_of_Funded_Units_Against_Eligible__c != null
@@ -347,20 +347,20 @@ public with sharing class CommissionCalculationService {
         return null;
     }
 
-    private static Map<String, List<RC_Commission_Tier__mdt>> loadTiers(Set<String> planNames) {
-        Map<String, List<RC_Commission_Tier__mdt>> result = new Map<String, List<RC_Commission_Tier__mdt>>();
-        for (RC_Commission_Tier__mdt tier : [
-            SELECT Commission_Plan__r.DeveloperName,
+    private static Map<String, List<Commission_Tier__c>> loadTiers(Set<String> planNames) {
+        Map<String, List<Commission_Tier__c>> result = new Map<String, List<Commission_Tier__c>>();
+        for (Commission_Tier__c tier : [
+            SELECT Commission_Plan__r.DeveloperName__c,
                    Lowest_of_Funded_Unit_Against_Eligible__c,
                    Upper_of_Funded_Units_Against_Eligible__c,
                    Plan_Tier_Payout__c,
                    Payout_Type__c
-            FROM RC_Commission_Tier__mdt
-            ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c
+            FROM Commission_Tier__c
+            WHERE Commission_Plan__r.DeveloperName__c IN :planNames
+            ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c ASC NULLS LAST
         ]) {
-            String planKey = tier.Commission_Plan__r.DeveloperName;
-            if (!planNames.contains(planKey)) continue;
-            if (!result.containsKey(planKey)) result.put(planKey, new List<RC_Commission_Tier__mdt>());
+            String planKey = tier.Commission_Plan__r.DeveloperName__c;
+            if (!result.containsKey(planKey)) result.put(planKey, new List<Commission_Tier__c>());
             result.get(planKey).add(tier);
         }
         return result;

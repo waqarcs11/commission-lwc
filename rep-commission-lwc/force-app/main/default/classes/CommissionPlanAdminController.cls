@@ -1,13 +1,17 @@
 public with sharing class CommissionPlanAdminController {
 
-    // Returns all Commission Plan custom metadata records
+    // Returns all commission plans from the custom object
     @AuraEnabled(cacheable=true)
-    public static List<RC_Commission_Plan__mdt> getPlans() {
-        return [
-            SELECT Id, Label, DeveloperName, Payout_Type__c
-            FROM RC_Commission_Plan__mdt
-            ORDER BY Label
-        ];
+    public static List<PlanWrapper> getPlans() {
+        List<PlanWrapper> result = new List<PlanWrapper>();
+        for (Commission_Plan__c p : [
+            SELECT Name, DeveloperName__c, Payout_Type__c
+            FROM Commission_Plan__c
+            ORDER BY Name
+        ]) {
+            result.add(new PlanWrapper(p.Name, p.DeveloperName__c, p.Payout_Type__c));
+        }
+        return result;
     }
 
     // System/tracking fields excluded from admin config (in addition to any *_calc__c fields)
@@ -98,6 +102,65 @@ public with sharing class CommissionPlanAdminController {
         if (!newConfigs.isEmpty()) insert newConfigs;
     }
 
+    // Creates or updates a commission plan by DeveloperName__c (upsert).
+    @AuraEnabled
+    public static void savePlan(String name, String developerName, String payoutType) {
+        if (String.isBlank(name) || String.isBlank(developerName)) {
+            throw new AuraHandledException('Plan Name and Developer Name are required.');
+        }
+        Commission_Plan__c plan = new Commission_Plan__c(
+            Name             = name,
+            DeveloperName__c = developerName,
+            Payout_Type__c   = payoutType
+        );
+        upsert plan DeveloperName__c;
+    }
+
+    // Adds a new tier to the given plan.
+    @AuraEnabled
+    public static void saveTier(String planDeveloperName, Decimal lower, Decimal upper, Decimal payout, String payoutType) {
+        List<Commission_Plan__c> plans = [SELECT Id FROM Commission_Plan__c WHERE DeveloperName__c = :planDeveloperName LIMIT 1];
+        if (plans.isEmpty()) throw new AuraHandledException('Plan not found: ' + planDeveloperName);
+        insert new Commission_Tier__c(
+            Commission_Plan__c                        = plans[0].Id,
+            Lowest_of_Funded_Unit_Against_Eligible__c = lower,
+            Upper_of_Funded_Units_Against_Eligible__c = upper,
+            Plan_Tier_Payout__c                       = payout,
+            Payout_Type__c                            = payoutType
+        );
+    }
+
+    // Deletes a single tier by Id.
+    @AuraEnabled
+    public static void deleteTier(Id tierId) {
+        delete new Commission_Tier__c(Id = tierId);
+    }
+
+    // Returns commission tiers for the given plan with record Ids (for delete support).
+    @AuraEnabled(cacheable=true)
+    public static List<TierInfo> getTiersForPlanWithId(String planDeveloperName) {
+        List<TierInfo> tiers = new List<TierInfo>();
+        if (String.isBlank(planDeveloperName)) return tiers;
+        for (Commission_Tier__c tier : [
+            SELECT Id, Lowest_of_Funded_Unit_Against_Eligible__c,
+                   Upper_of_Funded_Units_Against_Eligible__c,
+                   Plan_Tier_Payout__c, Payout_Type__c
+            FROM Commission_Tier__c
+            WHERE Commission_Plan__r.DeveloperName__c = :planDeveloperName
+            ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c ASC NULLS LAST
+        ]) {
+            TierInfo t = new TierInfo(
+                tier.Lowest_of_Funded_Unit_Against_Eligible__c,
+                tier.Upper_of_Funded_Units_Against_Eligible__c,
+                tier.Plan_Tier_Payout__c,
+                tier.Payout_Type__c
+            );
+            t.id = tier.Id;
+            tiers.add(t);
+        }
+        return tiers;
+    }
+
     // Returns report names for a list of report IDs.
     // Used by the Report Sources Reference widget to display human-readable names.
     @AuraEnabled(cacheable=true)
@@ -122,35 +185,32 @@ public with sharing class CommissionPlanAdminController {
     }
 
     // Returns commission tiers for the given plan, ordered by lower bound.
-    // Fetches all CMT tiers and filters in Apex because MetadataRelationship
-    // fields cannot be used in SOQL WHERE clauses.
     @AuraEnabled(cacheable=true)
     public static List<TierInfo> getTiersForPlan(String planDeveloperName) {
         List<TierInfo> tiers = new List<TierInfo>();
         if (String.isBlank(planDeveloperName)) return tiers;
 
-        for (RC_Commission_Tier__mdt tier : [
-            SELECT Commission_Plan__r.DeveloperName,
-                   Lowest_of_Funded_Unit_Against_Eligible__c,
+        for (Commission_Tier__c tier : [
+            SELECT Lowest_of_Funded_Unit_Against_Eligible__c,
                    Upper_of_Funded_Units_Against_Eligible__c,
                    Plan_Tier_Payout__c,
                    Payout_Type__c
-            FROM RC_Commission_Tier__mdt
+            FROM Commission_Tier__c
+            WHERE Commission_Plan__r.DeveloperName__c = :planDeveloperName
             ORDER BY Lowest_of_Funded_Unit_Against_Eligible__c ASC NULLS LAST
         ]) {
-            if (tier.Commission_Plan__r.DeveloperName == planDeveloperName) {
-                tiers.add(new TierInfo(
-                    tier.Lowest_of_Funded_Unit_Against_Eligible__c,
-                    tier.Upper_of_Funded_Units_Against_Eligible__c,
-                    tier.Plan_Tier_Payout__c,
-                    tier.Payout_Type__c
-                ));
-            }
+            tiers.add(new TierInfo(
+                tier.Lowest_of_Funded_Unit_Against_Eligible__c,
+                tier.Upper_of_Funded_Units_Against_Eligible__c,
+                tier.Plan_Tier_Payout__c,
+                tier.Payout_Type__c
+            ));
         }
         return tiers;
     }
 
     public class TierInfo {
+        @AuraEnabled public String  id         { get; set; }
         @AuraEnabled public Decimal lower      { get; set; }
         @AuraEnabled public Decimal upper      { get; set; }
         @AuraEnabled public Decimal payout     { get; set; }
@@ -161,6 +221,19 @@ public with sharing class CommissionPlanAdminController {
             this.upper      = upper;
             this.payout     = payout;
             this.payoutType = payoutType;
+        }
+    }
+
+    // Wrapper that exposes Label/DeveloperName shape matching the old metadata API — keeps LWC unchanged
+    public class PlanWrapper {
+        @AuraEnabled public String Label       { get; set; }
+        @AuraEnabled public String DeveloperName { get; set; }
+        @AuraEnabled public String payoutType  { get; set; }
+
+        public PlanWrapper(String label, String developerName, String payoutType) {
+            this.Label         = label;
+            this.DeveloperName = developerName;
+            this.payoutType    = payoutType;
         }
     }
 

@@ -256,6 +256,10 @@
         <visibility>Visible</visibility>
     </tabSettings>
     <tabSettings>
+        <tab>Commission_Plan_Manager</tab>
+        <visibility>Visible</visibility>
+    </tabSettings>
+    <tabSettings>
         <tab>Representative_Commission__c</tab>
         <visibility>Visible</visibility>
     </tabSettings>

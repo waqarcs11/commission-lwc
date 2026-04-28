@@ -80,12 +80,76 @@ The package adds a **Commission Plan** field to the User object. This field stor
 
 ---
 
-## Step 4 — Seed the Default Field Configurations
+## Step 4 — Seed Commission Plans, Tiers, and Field Configurations
 
-The package includes pre-configured field selections for all 6 commission plans. Run the following code once in **Anonymous Apex** to apply the defaults.
+This step creates all commission plans, tiers, and default field configurations. Run each script once in **Anonymous Apex**:
 
 1. Go to **Setup** → search **Anonymous Apex** (or Developer Console → Debug → Open Execute Anonymous Window)
-2. Paste the following code and click **Execute**:
+
+### Script A — Seed Commission Plans and Tiers
+
+Paste and click **Execute**:
+
+```apex
+CommissionDataInstallHandler.seedPlansAndTiers();
+```
+
+This creates all 6 commission plans and their tiers in the `Commission_Plan__c` and `Commission_Tier__c` custom objects:
+
+| Plan | Developer Name | Payout Type |
+|------|----------------|-------------|
+| Cardiff PM Comp | `Cardiff_PM_Comp` | Flat Dollar |
+| Brokered PM Comp | `Brokered_PM_Comp` | Percentage |
+| Brokered CRR Comp | `Brokered_CRR_Comp` | Flat Dollar |
+| Assistant Renewals Director Comp | `Assistant_Renewals_Director_Comp` | Flat Dollar |
+| CRF CRR Comp | `CRF_CRR_Comp` | Flat Dollar |
+| Proposed Comp | `Proposed_Comp` | Percentage |
+
+**Tiers created per plan:**
+
+| Plan | Lower % | Upper % | Payout | Type |
+|------|---------|---------|--------|------|
+| Cardiff PM Comp | 0 | 11.99 | $0 | Currency |
+| Cardiff PM Comp | 12 | 14.99 | $1,000 | Currency |
+| Cardiff PM Comp | 15 | 17.99 | $2,500 | Currency |
+| Cardiff PM Comp | 22 | 24.99 | $6,500 | Currency |
+| Cardiff PM Comp | 27 | 100 | $10,000 | Currency |
+| Brokered PM Comp | 0 | 4.99 | 0% | Percent |
+| Brokered PM Comp | 5 | 6.49 | 1% | Percent |
+| Brokered PM Comp | 6.5 | 7.49 | 3% | Percent |
+| Brokered PM Comp | 7.5 | 8.99 | 4% | Percent |
+| Brokered PM Comp | 9 | 100 | 5% | Percent |
+| Brokered CRR Comp | 0 | 14.99 | $0 | Currency |
+| Brokered CRR Comp | 15 | 16.99 | $2,500 | Currency |
+| Brokered CRR Comp | 17 | 19.99 | $3,000 | Currency |
+| Brokered CRR Comp | 20 | 21.99 | $4,000 | Currency |
+| Brokered CRR Comp | 22 | 100 | $5,000 | Currency |
+| Assistant Renewals Director Comp | 0 | 7.99 | $0 | Currency |
+| Assistant Renewals Director Comp | 8 | 9.99 | $1,000 | Currency |
+| Assistant Renewals Director Comp | 10 | 12.99 | $1,500 | Currency |
+| Assistant Renewals Director Comp | 13 | 15.99 | $2,500 | Currency |
+| Assistant Renewals Director Comp | 16 | 19.99 | $4,000 | Currency |
+| Assistant Renewals Director Comp | 20 | 100 | $8,000 | Currency |
+| CRF CRR Comp | 0 | 14.99 | $0 | Currency |
+| CRF CRR Comp | 15 | 19.99 | $1,000 | Currency |
+| CRF CRR Comp | 20 | 24.99 | $1,500 | Currency |
+| CRF CRR Comp | 25 | 29.99 | $2,000 | Currency |
+| CRF CRR Comp | 30 | 34.99 | $3,000 | Currency |
+| CRF CRR Comp | 35 | 100 | $4,000 | Currency |
+| Proposed Comp | 0 | 16.99 | 4% | Percent |
+| Proposed Comp | 17 | 19.99 | 6% | Percent |
+| Proposed Comp | 20 | 22.49 | 7% | Percent |
+| Proposed Comp | 22.5 | 26.49 | 8% | Percent |
+| Proposed Comp | 26.5 | 33.49 | 10% | Percent |
+| Proposed Comp | 33.5 | 100 | 13% | Percent |
+
+> **Safe to re-run:** Plans are upserted by Developer Name so existing plans are not duplicated. Tiers are deleted and re-inserted per plan on each run.
+
+> **View plans and tiers:** After running, open the **Commission Plans** tab in the Commission Management app to see all plans and tiers.
+
+### Script B — Seed Default Field Configurations
+
+Paste and click **Execute**:
 
 ```apex
 new CommissionFieldConfigInstallHandler().onInstall(null);

@@ -213,14 +213,18 @@ public with sharing class CommissionEntryController {
         return result;
     }
 
-    // Returns all commission plans from custom metadata
+    // Returns all commission plans from the custom object
     @AuraEnabled(cacheable=true)
-    public static List<RC_Commission_Plan__mdt> getCommissionPlans() {
-        return [
-            SELECT Label, DeveloperName, Payout_Type__c
-            FROM RC_Commission_Plan__mdt
-            ORDER BY Label
-        ];
+    public static List<PlanWrapper> getCommissionPlans() {
+        List<PlanWrapper> result = new List<PlanWrapper>();
+        for (Commission_Plan__c p : [
+            SELECT Name, DeveloperName__c, Payout_Type__c
+            FROM Commission_Plan__c
+            ORDER BY Name
+        ]) {
+            result.add(new PlanWrapper(p.Name, p.DeveloperName__c, p.Payout_Type__c));
+        }
+        return result;
     }
 
     // Returns field details (apiName, label, type) for DATA ENTRY fields configured on the
@@ -466,6 +470,19 @@ public with sharing class CommissionEntryController {
     }
 
     // ── Wrapper classes ────────────────────────────────────────────────────────
+
+    // Exposes Label/DeveloperName shape matching the old metadata API — keeps LWC unchanged
+    public class PlanWrapper {
+        @AuraEnabled public String Label         { get; set; }
+        @AuraEnabled public String DeveloperName { get; set; }
+        @AuraEnabled public String payoutType    { get; set; }
+
+        public PlanWrapper(String label, String developerName, String payoutType) {
+            this.Label         = label;
+            this.DeveloperName = developerName;
+            this.payoutType    = payoutType;
+        }
+    }
 
     public class UserOption {
         @AuraEnabled public String id          { get; set; }

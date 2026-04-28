@@ -80,7 +80,7 @@ private class CommissionEntryControllerTest {
     @IsTest
     static void testGetCommissionPlans_returnsNonNull() {
         Test.startTest();
-        List<RC_Commission_Plan__mdt> plans = CommissionEntryController.getCommissionPlans();
+        List<CommissionEntryController.PlanWrapper> plans = CommissionEntryController.getCommissionPlans();
         Test.stopTest();
 
         System.assertNotEquals(null, plans, 'Should return a non-null list');

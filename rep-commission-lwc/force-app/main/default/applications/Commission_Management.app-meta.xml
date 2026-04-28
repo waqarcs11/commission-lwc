@@ -10,5 +10,6 @@
     <tabs>Commission_Run</tabs>
     <tabs>Commission_Plan_Assign</tabs>
     <tabs>Commission_Plan_Admin</tabs>
+    <tabs>Commission_Plan_Manager</tabs>
     <tabs>Representative_Commission__c</tabs>
 </CustomApplication>

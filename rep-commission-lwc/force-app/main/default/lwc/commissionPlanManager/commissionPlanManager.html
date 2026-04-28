@@ -1,0 +1,188 @@
+<template>
+    <lightning-card title="Commission Plans and Tiers" icon-name="standard:product">
+        <div class="slds-p-around_medium">
+            <div class="slds-grid slds-gutters">
+
+                <!-- ── LEFT: Plans ─────────────────────────────────────────── -->
+                <div class="slds-col slds-size_1-of-3">
+                    <div class="panel-header">
+                        <h2 class="panel-title">Commission Plans</h2>
+                        <lightning-button
+                            label={addPlanLabel}
+                            variant={addPlanVariant}
+                            onclick={handleToggleAddPlan}>
+                        </lightning-button>
+                    </div>
+
+                    <!-- Add Plan Form -->
+                    <template if:true={showAddPlanForm}>
+                        <div class="add-form">
+                            <lightning-input
+                                label="Plan Name"
+                                value={newPlanName}
+                                onchange={handlePlanNameChange}
+                                class="slds-m-bottom_x-small">
+                            </lightning-input>
+                            <lightning-input
+                                label="Developer Name"
+                                value={newPlanDevName}
+                                onchange={handlePlanDevNameChange}
+                                class="slds-m-bottom_x-small">
+                            </lightning-input>
+                            <lightning-combobox
+                                label="Payout Type"
+                                value={newPlanPayoutType}
+                                options={payoutTypeOptions}
+                                onchange={handlePlanPayoutTypeChange}
+                                class="slds-m-bottom_small">
+                            </lightning-combobox>
+                            <lightning-button
+                                variant="brand"
+                                label="Save Plan"
+                                onclick={handleSavePlan}
+                                disabled={isSavePlanDisabled}>
+                            </lightning-button>
+                        </div>
+                    </template>
+
+                    <!-- Plans List -->
+                    <template if:true={isLoadingPlans}>
+                        <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                    </template>
+                    <template if:false={isLoadingPlans}>
+                        <template if:true={hasPlans}>
+                            <ul class="plan-list">
+                                <template for:each={plans} for:item="plan">
+                                    <li key={plan.DeveloperName}
+                                        class={plan.cssClass}
+                                        data-devname={plan.DeveloperName}
+                                        onclick={handleSelectPlan}>
+                                        <span class="plan-name">{plan.Label}</span>
+                                        <span class="plan-type">{plan.payoutType}</span>
+                                    </li>
+                                </template>
+                            </ul>
+                        </template>
+                        <template if:false={hasPlans}>
+                            <p class="slds-text-color_weak slds-p-top_small">No plans yet. Add one above.</p>
+                        </template>
+                    </template>
+                </div>
+
+                <!-- ── RIGHT: Tiers ────────────────────────────────────────── -->
+                <div class="slds-col slds-size_2-of-3">
+                    <template if:true={selectedPlan}>
+                        <div class="panel-header">
+                            <h2 class="panel-title">Tiers — {selectedPlanLabel}</h2>
+                            <lightning-button
+                                label={addTierLabel}
+                                variant={addTierVariant}
+                                onclick={handleToggleAddTier}>
+                            </lightning-button>
+                        </div>
+
+                        <!-- Add Tier Form -->
+                        <template if:true={showAddTierForm}>
+                            <div class="add-form">
+                                <div class="slds-grid slds-gutters slds-wrap">
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input
+                                            type="number"
+                                            label="Lower Bound (%)"
+                                            value={newTierLower}
+                                            step="0.01"
+                                            onchange={handleTierLowerChange}>
+                                        </lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2">
+                                        <lightning-input
+                                            type="number"
+                                            label="Upper Bound (%)"
+                                            value={newTierUpper}
+                                            step="0.01"
+                                            onchange={handleTierUpperChange}>
+                                        </lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                        <lightning-input
+                                            type="number"
+                                            label="Payout"
+                                            value={newTierPayout}
+                                            step="0.01"
+                                            onchange={handleTierPayoutChange}>
+                                        </lightning-input>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-2 slds-m-top_small">
+                                        <lightning-combobox
+                                            label="Payout Type"
+                                            value={newTierPayoutType}
+                                            options={tierPayoutTypeOptions}
+                                            onchange={handleTierPayoutTypeChange}>
+                                        </lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="slds-m-top_small">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Add Tier"
+                                        onclick={handleSaveTier}
+                                        disabled={isSaveTierDisabled}>
+                                    </lightning-button>
+                                </div>
+                            </div>
+                        </template>
+
+                        <!-- Tiers Table -->
+                        <template if:true={isLoadingTiers}>
+                            <lightning-spinner alternative-text="Loading" size="small"></lightning-spinner>
+                        </template>
+                        <template if:false={isLoadingTiers}>
+                            <template if:true={hasTiers}>
+                                <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_striped tier-table">
+                                    <thead>
+                                        <tr class="slds-line-height_reset">
+                                            <th><div class="slds-truncate">Lower (%)</div></th>
+                                            <th><div class="slds-truncate">Upper (%)</div></th>
+                                            <th><div class="slds-truncate">Payout</div></th>
+                                            <th><div class="slds-truncate">Type</div></th>
+                                            <th><div class="slds-truncate"></div></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template for:each={tiers} for:item="tier">
+                                            <tr key={tier.id}>
+                                                <td>{tier.lower}</td>
+                                                <td>{tier.upper}</td>
+                                                <td>{tier.payout}</td>
+                                                <td>{tier.payoutType}</td>
+                                                <td>
+                                                    <lightning-button-icon
+                                                        icon-name="utility:delete"
+                                                        variant="bare"
+                                                        alternative-text="Delete"
+                                                        data-id={tier.id}
+                                                        onclick={handleDeleteTier}>
+                                                    </lightning-button-icon>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </template>
+                            <template if:false={hasTiers}>
+                                <p class="slds-text-color_weak slds-p-top_small">No tiers configured for this plan.</p>
+                            </template>
+                        </template>
+                    </template>
+
+                    <template if:false={selectedPlan}>
+                        <div class="slds-p-around_large slds-text-align_center slds-text-color_weak">
+                            Select a plan on the left to view and manage its tiers.
+                        </div>
+                    </template>
+                </div>
+
+            </div>
+        </div>
+    </lightning-card>
+</template>

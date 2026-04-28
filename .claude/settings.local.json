@@ -29,7 +29,11 @@
       "Bash(mkdir -p E:/xampp/htdocs/commission_LWC/tmp)",
       "Bash(ls:*)",
       "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" project:*)",
-      "Bash(xargs wc:*)"
+      "Bash(xargs wc:*)",
+      "Bash(\"C:/Users/adskn/AppData/Roaming/npm/sf.cmd\" org *)",
+      "Bash(mkdir -p E:/xampp/htdocs/commission_LWC/rep-commission-lwc/force-app/main/default/objects/RC_Commission_Plan__c/fields)",
+      "Bash(mkdir -p E:/xampp/htdocs/commission_LWC/rep-commission-lwc/force-app/main/default/objects/RC_Commission_Tier__c/fields)",
+      "Bash(C:/Users/adskn/AppData/Roaming/npm/sf.cmd project *)"
     ]
   }
 }

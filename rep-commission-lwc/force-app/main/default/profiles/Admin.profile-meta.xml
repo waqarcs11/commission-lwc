@@ -27,6 +27,10 @@
         <visibility>DefaultOn</visibility>
     </tabVisibilities>
     <tabVisibilities>
+        <tab>Commission_Plan_Manager</tab>
+        <visibility>DefaultOn</visibility>
+    </tabVisibilities>
+    <tabVisibilities>
         <tab>Representative_Commission__c</tab>
         <visibility>DefaultOn</visibility>
     </tabVisibilities>
